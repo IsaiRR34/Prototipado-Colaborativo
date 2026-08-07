@@ -17,11 +17,26 @@ public class LG_Shoot : MonoBehaviour
     [Tooltip("Input action reference to trigger shooting. If left empty, legacy inputs will be used instead.")]
     [SerializeField] private InputActionReference shootAction;
 
+    private InputAction shootActionInstance;
     private float nextFireTime;
+
+    private void Start()
+    {
+        // Detect PlayerInput automatically from parent or self
+        var playerInput = GetComponentInParent<PlayerInput>();
+        if (playerInput != null && playerInput.actions != null)
+        {
+            shootActionInstance = playerInput.actions.FindAction("Shoot");
+        }
+    }
 
     private void OnEnable()
     {
-        if (shootAction != null && shootAction.action != null)
+        if (shootActionInstance != null)
+        {
+            shootActionInstance.Enable();
+        }
+        else if (shootAction != null && shootAction.action != null)
         {
             shootAction.action.Enable();
         }
@@ -29,7 +44,11 @@ public class LG_Shoot : MonoBehaviour
 
     private void OnDisable()
     {
-        if (shootAction != null && shootAction.action != null)
+        if (shootActionInstance != null)
+        {
+            shootActionInstance.Disable();
+        }
+        else if (shootAction != null && shootAction.action != null)
         {
             shootAction.action.Disable();
         }
@@ -39,10 +58,13 @@ public class LG_Shoot : MonoBehaviour
     {
         bool isShooting = false;
 
-        // Try reading input from the new Input System Action
-        if (shootAction != null && shootAction.action != null)
+        // Try reading input from the new Input System Action (auto-detected or referenced)
+        if (shootActionInstance != null)
         {
-            // For a button, we check if it is pressed or held
+            isShooting = shootActionInstance.IsPressed();
+        }
+        else if (shootAction != null && shootAction.action != null)
+        {
             isShooting = shootAction.action.IsPressed();
         }
         // Fallback to legacy input manager for easy out-of-the-box testing

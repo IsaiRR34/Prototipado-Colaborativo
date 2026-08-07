@@ -14,13 +14,19 @@ public class RIMovement : MonoBehaviour
     public float estaminaMax = 5f;       // segundos que aguanta corriendo
     public float recuperacion = 1.5f;    //tiempo de recuperación de la estamina
 
+    [Header("Sensibilidad de Cámara (Mouse Look)")]
+    public float sensibilidadX = 0.15f;
+    public float sensibilidadY = 0.15f;
+    public float limiteVertical = 80f;
+
     public Transform cabeza;             // objeto vacio donde cuelga la camara
 
     CharacterController charCotroller;
-    InputAction accionMover, accionCorrer, accionAgacharse;
+    InputAction accionMover, accionCorrer, accionAgacharse, accionMirar;
     Vector3 velocidad;                   
     float estamina;
     bool estoyAgachado;
+    float rotacionX;
 
     void Awake()
     {
@@ -31,17 +37,36 @@ public class RIMovement : MonoBehaviour
         accionMover = acciones["Move"];
         accionCorrer = acciones["Sprint"];
         accionAgacharse = acciones["Crouch"];
+        accionMirar = acciones.FindAction("Look");
     }
 
     void Start()
     {
         estamina = estaminaMax;
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()
     {
         bool enSuelo = charCotroller.isGrounded;
+
+        // Rotación de cámara y personaje (Mouse Look)
+        if (accionMirar != null)
+        {
+            Vector2 deltaMouse = accionMirar.ReadValue<Vector2>();
+
+            // Rotar cuerpo del jugador (horizontal)
+            transform.Rotate(Vector3.up * deltaMouse.x * sensibilidadX);
+
+            // Rotar cabeza / cámara (vertical)
+            rotacionX -= deltaMouse.y * sensibilidadY;
+            rotacionX = Mathf.Clamp(rotacionX, -limiteVertical, limiteVertical);
+            if (cabeza != null)
+            {
+                cabeza.localRotation = Quaternion.Euler(rotacionX, 0f, 0f);
+            }
+        }
 
         //Direccion que pide el jugador, relativa a hacia donde mira
         Vector2 entrada = accionMover.ReadValue<Vector2>();
@@ -51,7 +76,10 @@ public class RIMovement : MonoBehaviour
         if (accionAgacharse.WasPressedThisFrame()) estoyAgachado = !estoyAgachado;
         charCotroller.height = Mathf.Lerp(charCotroller.height, estoyAgachado ? 1f : 1.8f, Time.deltaTime * 10f);
         charCotroller.center = new Vector3(0f, charCotroller.height / 2f, 0f);
-        cabeza.localPosition = Vector3.Lerp(cabeza.localPosition, new Vector3(0f, charCotroller.height - 0.2f, 0f), Time.deltaTime * 10f);
+        if (cabeza != null)
+        {
+            cabeza.localPosition = Vector3.Lerp(cabeza.localPosition, new Vector3(0f, charCotroller.height - 0.2f, 0f), Time.deltaTime * 10f);
+        }
 
         //Correr: solo hacia adelante, de pie y con estamina
         bool corriendo = accionCorrer.IsPressed() && entrada.y > 0f && !estoyAgachado && estamina > 0f;
