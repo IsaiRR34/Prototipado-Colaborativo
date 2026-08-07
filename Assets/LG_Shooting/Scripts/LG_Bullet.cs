@@ -40,12 +40,22 @@ public class LG_Bullet : MonoBehaviour
     // --- 3D Collision Handlers ---
     private void OnTriggerEnter(Collider other)
     {
+        Rigidbody rb = other.attachedRigidbody;
+        if (rb != null && !rb.isKinematic)
+        {
+            rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+        }
         // Return to pool when hitting another collider
         ReturnToPool();
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        Rigidbody rb = collision.rigidbody;
+        if (rb != null && !rb.isKinematic)
+        {
+            rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+        }
         // Return to pool when hitting another collider physically
         ReturnToPool();
     }
