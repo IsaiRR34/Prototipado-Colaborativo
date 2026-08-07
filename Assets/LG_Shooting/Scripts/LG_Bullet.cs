@@ -45,6 +45,18 @@ public class LG_Bullet : MonoBehaviour
         {
             rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
         }
+
+        // Apply damage if we hit an enemy
+        LG_Enemy enemy = other.GetComponent<LG_Enemy>();
+        if (enemy == null && rb != null)
+        {
+            enemy = rb.GetComponent<LG_Enemy>();
+        }
+        if (enemy != null)
+        {
+            enemy.TakeDamage(1f);
+        }
+
         // Return to pool when hitting another collider
         ReturnToPool();
     }
@@ -56,6 +68,18 @@ public class LG_Bullet : MonoBehaviour
         {
             rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
         }
+
+        // Apply damage if we hit an enemy
+        LG_Enemy enemy = collision.gameObject.GetComponent<LG_Enemy>();
+        if (enemy == null && rb != null)
+        {
+            enemy = rb.GetComponent<LG_Enemy>();
+        }
+        if (enemy != null)
+        {
+            enemy.TakeDamage(1f);
+        }
+
         // Return to pool when hitting another collider physically
         ReturnToPool();
     }

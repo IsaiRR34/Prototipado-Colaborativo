@@ -67,4 +67,13 @@ public class LG_Collectible : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
+    /// <summary>
+    /// Programmatically sets up the collectible item properties.
+    /// </summary>
+    public void Initialize(string name, int qty)
+    {
+        itemName = name;
+        amount = qty;
+    }
 }

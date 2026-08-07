@@ -7,9 +7,11 @@ public class LG_HUD : MonoBehaviour
     [Header("Components to Monitor")]
     [SerializeField] private RIMovement playerMovement;
     [SerializeField] private LG_Inventory playerInventory;
+    [SerializeField] private LG_PlayerHealth playerHealth;
 
     [Header("UI Elements")]
     [SerializeField] private Slider staminaSlider;
+    [SerializeField] private Slider healthSlider;
     [SerializeField] private Text inventoryText;
 
     private void Start()
@@ -23,6 +25,11 @@ public class LG_HUD : MonoBehaviour
         if (playerInventory == null)
         {
             playerInventory = FindObjectOfType<LG_Inventory>();
+        }
+
+        if (playerHealth == null)
+        {
+            playerHealth = FindObjectOfType<LG_PlayerHealth>();
         }
 
         // Subscribe to inventory update events
@@ -47,6 +54,12 @@ public class LG_HUD : MonoBehaviour
         if (staminaSlider != null && playerMovement != null)
         {
             staminaSlider.value = playerMovement.EstaminaNormalizada();
+        }
+
+        // Update Health Slider in real time
+        if (healthSlider != null && playerHealth != null)
+        {
+            healthSlider.value = playerHealth.GetHealthNormalized();
         }
     }
 

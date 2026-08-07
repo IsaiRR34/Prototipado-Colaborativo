@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 0c44c99e580544c4fb45c10695948346
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 336744
+  packageName: FREE Zombie Male AAB
+  packageVersion: 1.0
+  assetPath: Assets/ZombieMale_AAB/Shaders/Standard_SNP_DoubleSided_AAB.shader
+  uploadId: 796708
