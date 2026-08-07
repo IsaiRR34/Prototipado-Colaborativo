@@ -216,6 +216,10 @@ public class PrototypeSetupWindow : EditorWindow
         LG_Inventory inventory = player.GetComponent<LG_Inventory>();
         if (inventory == null) inventory = player.AddComponent<LG_Inventory>();
 
+        // Añadir LG_PlayerHealth
+        LG_PlayerHealth playerHealth = player.GetComponent<LG_PlayerHealth>();
+        if (playerHealth == null) playerHealth = player.AddComponent<LG_PlayerHealth>();
+
         Undo.RegisterCreatedObjectUndo(player, "Configurar Player");
 
         // 6. Configurar el Canvas HUD y Componente LG_HUD
@@ -234,12 +238,15 @@ public class PrototypeSetupWindow : EditorWindow
         }
 
         // Limpiar elementos de HUD anteriores si existieran
+        Transform oldHealthSlider = canvasGO.transform.Find("HealthSlider");
+        if (oldHealthSlider != null) DestroyImmediate(oldHealthSlider.gameObject);
         Transform oldSlider = canvasGO.transform.Find("StaminaSlider");
         if (oldSlider != null) DestroyImmediate(oldSlider.gameObject);
         Transform oldText = canvasGO.transform.Find("InventoryText");
         if (oldText != null) DestroyImmediate(oldText.gameObject);
 
         // Crear elementos UI
+        Slider healthSlider = CrearSliderVida(canvasGO.transform);
         Slider staminaSlider = CrearSliderStamina(canvasGO.transform);
         Text inventoryText = CrearTextoInventario(canvasGO.transform);
 
@@ -250,7 +257,9 @@ public class PrototypeSetupWindow : EditorWindow
         SerializedObject hudSO = new SerializedObject(hudComp);
         hudSO.FindProperty("playerMovement").objectReferenceValue = movement;
         hudSO.FindProperty("playerInventory").objectReferenceValue = inventory;
+        hudSO.FindProperty("playerHealth").objectReferenceValue = playerHealth;
         hudSO.FindProperty("staminaSlider").objectReferenceValue = staminaSlider;
+        hudSO.FindProperty("healthSlider").objectReferenceValue = healthSlider;
         hudSO.FindProperty("inventoryText").objectReferenceValue = inventoryText;
         hudSO.ApplyModifiedProperties();
         Undo.RegisterCreatedObjectUndo(canvasGO, "Crear Canvas HUD");
@@ -307,6 +316,30 @@ public class PrototypeSetupWindow : EditorWindow
             }
         }
 
+        // 9. Crear Enemigos en la escena
+        GameObject enemigosRoot = GameObject.Find("Enemigos");
+        if (enemigosRoot == null)
+        {
+            enemigosRoot = new GameObject("Enemigos");
+        }
+
+        // Limpiar enemigos anteriores para evitar duplicados
+        for (int i = enemigosRoot.transform.childCount - 1; i >= 0; i--)
+        {
+            DestroyImmediate(enemigosRoot.transform.GetChild(i).gameObject);
+        }
+
+        // Obtener o crear material para el enemigo
+        Material materialEnemigo = ObtenerOCrearMaterialURP("Assets/LG_Shooting/LGAssets/Materials/Mat_Enemigo.mat", new Color(0.6f, 0.1f, 0.9f)); // Neon Purple/Magenta
+        Material materialBatteryDrop = AssetDatabase.LoadAssetAtPath<Material>("Assets/LG_Shooting/LGAssets/Materials/Mat_Collectible_Battery.mat");
+        Material materialAmmoDrop = AssetDatabase.LoadAssetAtPath<Material>("Assets/LG_Shooting/LGAssets/Materials/Mat_Collectible_Ammo.mat");
+
+        // Crear dos enemigos a los lados de la torre de objetivos
+        CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Izquierda", new Vector3(-6f, 1f, 8f), materialEnemigo, materialBatteryDrop, "Bateria", 1);
+        CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Derecha", new Vector3(6f, 1f, 8f), materialEnemigo, materialAmmoDrop, "Municion", 5);
+
+        Undo.RegisterCreatedObjectUndo(enemigosRoot, "Crear Enemigos Root");
+
         // Mostrar diálogo de confirmación
         EditorUtility.DisplayDialog("Éxito", 
             "¡El prototipo se ha configurado con éxito usando materiales URP!\n\n" +
@@ -314,9 +347,62 @@ public class PrototypeSetupWindow : EditorWindow
             "- Se generó el Canvas UI para Estamina e Inventario en pantalla.\n" +
             "- Se colocaron coleccionables flotantes interactivos de colores.\n" +
             "- Se configuró el Object Pool de Balas en la escena (las balas empujan bloques).\n" +
-            "- Se crearon objetivos físicos destruibles (torre de cubos).\n\n" +
+            "- Se crearon objetivos físicos destruibles (torre de cubos).\n" +
+            "- Se crearon enemigos interactivos (Zombis 3D Animados) que persiguen al jugador y sueltan items al ser derrotados.\n\n" +
             "¡Haz clic en Play para probar!", 
             "OK");
+    }
+
+    private static Slider CrearSliderVida(Transform parent)
+    {
+        // 1. Root Slider GO
+        GameObject sliderGO = new GameObject("HealthSlider");
+        sliderGO.transform.SetParent(parent, false);
+        RectTransform sliderRect = sliderGO.AddComponent<RectTransform>();
+        sliderRect.anchoredPosition = new Vector2(40f, -20f);
+        sliderRect.sizeDelta = new Vector2(250f, 15f);
+        sliderRect.anchorMin = new Vector2(0f, 1f); // Top Left
+        sliderRect.anchorMax = new Vector2(0f, 1f);
+        sliderRect.pivot = new Vector2(0f, 1f);
+
+        Slider slider = sliderGO.AddComponent<Slider>();
+
+        // 2. Background
+        GameObject bgGO = new GameObject("Background");
+        bgGO.transform.SetParent(sliderRect, false);
+        RectTransform bgRect = bgGO.AddComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.sizeDelta = Vector2.zero;
+        Image bgImg = bgGO.AddComponent<Image>();
+        bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+
+        // 3. Fill Area
+        GameObject fillAreaGO = new GameObject("Fill Area");
+        fillAreaGO.transform.SetParent(sliderRect, false);
+        RectTransform fillAreaRect = fillAreaGO.AddComponent<RectTransform>();
+        fillAreaRect.anchorMin = Vector2.zero;
+        fillAreaRect.anchorMax = Vector2.one;
+        fillAreaRect.sizeDelta = Vector2.zero;
+
+        // 4. Fill
+        GameObject fillGO = new GameObject("Fill");
+        fillGO.transform.SetParent(fillAreaRect, false);
+        RectTransform fillRect = fillGO.AddComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.sizeDelta = Vector2.zero;
+        Image fillImg = fillGO.AddComponent<Image>();
+        fillImg.color = new Color(0.85f, 0.15f, 0.15f, 0.8f); // Color rojo vida
+
+        // Link references
+        slider.targetGraphic = bgImg;
+        slider.fillRect = fillRect;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.value = 1f;
+
+        return slider;
     }
 
     private static Slider CrearSliderStamina(Transform parent)
@@ -325,7 +411,7 @@ public class PrototypeSetupWindow : EditorWindow
         GameObject sliderGO = new GameObject("StaminaSlider");
         sliderGO.transform.SetParent(parent, false);
         RectTransform sliderRect = sliderGO.AddComponent<RectTransform>();
-        sliderRect.anchoredPosition = new Vector2(40f, -40f);
+        sliderRect.anchoredPosition = new Vector2(40f, -45f);
         sliderRect.sizeDelta = new Vector2(250f, 15f);
         sliderRect.anchorMin = new Vector2(0f, 1f); // Top Left
         sliderRect.anchorMax = new Vector2(0f, 1f);
@@ -376,7 +462,7 @@ public class PrototypeSetupWindow : EditorWindow
         GameObject textGO = new GameObject("InventoryText");
         textGO.transform.SetParent(parent, false);
         RectTransform textRect = textGO.AddComponent<RectTransform>();
-        textRect.anchoredPosition = new Vector2(40f, -80f);
+        textRect.anchoredPosition = new Vector2(40f, -85f);
         textRect.sizeDelta = new Vector2(350f, 250f);
         textRect.anchorMin = new Vector2(0f, 1f); // Top Left
         textRect.anchorMax = new Vector2(0f, 1f);
@@ -462,5 +548,78 @@ public class PrototypeSetupWindow : EditorWindow
             }
         }
         return mat;
+    }
+
+    private static void CrearEnemigoPrototipo(Transform parent, string goName, Vector3 position, Material matEnemigo, Material matDrop, string dropItem, int dropQty)
+    {
+        // Cargar prefab del Zombi si existe para URP
+        string zombiePrefabPath = "Assets/ZombieMale_AAB/Prefabs/URP/ZombieMale_AAB_URP.prefab";
+        GameObject zombiePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(zombiePrefabPath);
+
+        GameObject enemigoGO;
+        
+        if (zombiePrefab != null)
+        {
+            // Si el prefab de Zombi existe, creamos un objeto vacío de base e instanciamos el prefab como hijo
+            enemigoGO = new GameObject(goName);
+            enemigoGO.transform.SetParent(parent);
+            enemigoGO.transform.position = position;
+            enemigoGO.transform.localScale = Vector3.one;
+
+            GameObject modelGO = (GameObject)PrefabUtility.InstantiatePrefab(zombiePrefab, enemigoGO.transform);
+            modelGO.transform.localPosition = Vector3.zero;
+            modelGO.transform.localRotation = Quaternion.identity;
+            modelGO.transform.localScale = Vector3.one;
+
+            // Añadir CapsuleCollider para ajustar al zombi
+            CapsuleCollider col = enemigoGO.GetComponent<CapsuleCollider>();
+            if (col == null) col = enemigoGO.AddComponent<CapsuleCollider>();
+            col.height = 1.8f;
+            col.center = new Vector3(0f, 0.9f, 0f);
+            col.radius = 0.4f;
+        }
+        else
+        {
+            // Fallback en caso de que no se encuentre el modelo del zombi
+            enemigoGO = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            enemigoGO.name = goName;
+            enemigoGO.transform.SetParent(parent);
+            enemigoGO.transform.position = position;
+            enemigoGO.transform.localScale = Vector3.one;
+            enemigoGO.GetComponent<Renderer>().sharedMaterial = matEnemigo;
+        }
+
+        // Añadir Rigidbody
+        Rigidbody rb = enemigoGO.GetComponent<Rigidbody>();
+        if (rb == null) rb = enemigoGO.AddComponent<Rigidbody>();
+        rb.mass = 1.5f;
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+        // Añadir script de enemigo
+        LG_Enemy enemyComp = enemigoGO.GetComponent<LG_Enemy>();
+        if (enemyComp == null) enemyComp = enemigoGO.AddComponent<LG_Enemy>();
+
+        // Configurar propiedades mediante SerializedObject
+        SerializedObject enemySO = new SerializedObject(enemyComp);
+        enemySO.FindProperty("maxHealth").floatValue = 3f;
+        enemySO.FindProperty("speed").floatValue = 2.5f;
+        enemySO.FindProperty("chaseRange").floatValue = 15f;
+        enemySO.FindProperty("stopDistance").floatValue = 1.5f;
+        enemySO.FindProperty("dropItemOnDeath").boolValue = true;
+        enemySO.FindProperty("dropItemName").stringValue = dropItem;
+        enemySO.FindProperty("dropAmount").intValue = dropQty;
+        enemySO.FindProperty("dropMaterial").objectReferenceValue = matDrop;
+        
+        // Tratar de asignar el Player automáticamente
+        GameObject player = GameObject.Find("Player (RI + LG)");
+        if (player != null)
+        {
+            enemySO.FindProperty("target").objectReferenceValue = player.transform;
+        }
+
+        enemySO.ApplyModifiedProperties();
+
+        Undo.RegisterCreatedObjectUndo(enemigoGO, $"Crear Enemigo {goName}");
     }
 }
