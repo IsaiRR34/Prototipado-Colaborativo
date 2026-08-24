@@ -1550,7 +1550,7 @@ MonoBehaviour:
   bulletPool: {fileID: 332587383}
   firePoint: {fileID: 812641371}
   fireRate: 0.15
-  shootAction: {fileID: 0}
+  shootAction: {fileID: -427111087004750932, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!114 &976434614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1603,7 +1603,7 @@ MonoBehaviour:
   m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: 
   m_SplitScreenIndex: -1
-  m_Camera: {fileID: 0}
+  m_Camera: {fileID: 125155483}
 --- !u!143 &976434616
 CharacterController:
   m_ObjectHideFlags: 0

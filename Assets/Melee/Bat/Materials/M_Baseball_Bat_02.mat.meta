@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4b3c44b05b0b6824f8a8ddfd3cc53743
+timeCreated: 1498050419
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: -1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 102171
+  packageName: "Baseball Bats \u2013 Pack"
+  packageVersion: 1.2
+  assetPath: Assets/Baseball Bats/Assets/Materials/M_Baseball_Bat_02.mat
+  uploadId: 750607
