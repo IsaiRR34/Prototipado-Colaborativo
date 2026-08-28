@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 57253eaf719a73c4695356bafafdec81
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 293680
+  packageName: Free-FlashLight
+  packageVersion: 1.0
+  assetPath: Assets/Free-FlashLight/Materials/FlashLight.mat
+  uploadId: 685706
