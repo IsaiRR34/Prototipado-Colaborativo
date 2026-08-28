@@ -1,13 +1,14 @@
 using UnityEngine;
+using UnityEngine.AI; // Necesario para NavMesh
 
+[RequireComponent(typeof(NavMeshAgent))] // Asegura que el enemigo tenga el componente
 public class LG_Enemy : MonoBehaviour
 {
     [Header("Health Settings")]
     [SerializeField] private float maxHealth = 3f;
     private float currentHealth;
 
-    [Header("Movement Settings")]
-    [SerializeField] private float speed = 2.5f;
+    [Header("Movement & NavMesh Settings")]
     [SerializeField] private float chaseRange = 15f;
     [SerializeField] private float stopDistance = 1.5f;
     [SerializeField] private Transform target; // The Player to follow
@@ -34,6 +35,7 @@ public class LG_Enemy : MonoBehaviour
     [SerializeField] private float attackCooldown = 1.5f;
     private float nextAttackTime;
 
+    private NavMeshAgent navAgent; // Referencia al NavMeshAgent
     private Renderer[] childRenderers;
     private Color[] originalColors;
     private float flashTimer;
@@ -46,6 +48,10 @@ public class LG_Enemy : MonoBehaviour
     private void Start()
     {
         currentHealth = maxHealth;
+        navAgent = GetComponent<NavMeshAgent>();
+
+        // Configurar NavMeshAgent con variables de inspector
+        navAgent.stoppingDistance = stopDistance;
 
         // Automatically locate Player if none is assigned
         if (target == null)
@@ -62,11 +68,9 @@ public class LG_Enemy : MonoBehaviour
         originalColors = new Color[childRenderers.Length];
         for (int i = 0; i < childRenderers.Length; i++)
         {
-            // Use instance material so we don't flash other objects using the same material
             originalColors[i] = childRenderers[i].material.color;
         }
 
-        // Find the visual model child object (typically the first child)
         if (transform.childCount > 0)
         {
             visualChild = transform.GetChild(0);
@@ -85,26 +89,25 @@ public class LG_Enemy : MonoBehaviour
 
     private void Update()
     {
-        // Smooth pursuit behavior
+        // Smooth pursuit behavior usando NavMesh
         if (target != null)
         {
             float distance = Vector3.Distance(transform.position, target.position);
-            if (distance <= chaseRange && distance > stopDistance)
-            {
-                // Face towards the player (only rotating horizontally on Y axis)
-                Vector3 direction = (target.position - transform.position).normalized;
-                direction.y = 0f;
-                if (direction.sqrMagnitude > 0.001f)
-                {
-                    transform.rotation = Quaternion.LookRotation(direction);
-                }
 
-                // Move forward towards the player
-                transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
-            }
-            else if (distance <= stopDistance && Time.time >= nextAttackTime)
+            if (distance <= chaseRange)
             {
-                AttackPlayer();
+                navAgent.isStopped = false;
+                navAgent.SetDestination(target.position); // NavMeshAgent maneja el camino
+
+                if (distance <= stopDistance && Time.time >= nextAttackTime)
+                {
+                    AttackPlayer();
+                }
+            }
+            else
+            {
+                // Si el jugador se aleja, detener la persecución
+                navAgent.isStopped = true;
             }
         }
 
@@ -124,31 +127,26 @@ public class LG_Enemy : MonoBehaviour
         // Perform procedural zombie movement animations
         if (useProceduralWalk && leftArm != null && rightArm != null)
         {
-            bool isChasing = target != null && 
-                             Vector3.Distance(transform.position, target.position) <= chaseRange && 
-                             Vector3.Distance(transform.position, target.position) > stopDistance;
+            // Usamos la velocidad del NavMeshAgent para determinar si camina
+            bool isChasing = navAgent.velocity.sqrMagnitude > 0.1f;
 
             if (isChasing)
             {
-                // Classic zombie walk: Arms raised forward, bobbing up and down, body swaying
                 float timeFactor = Time.time * 6f;
-                float armBob = Mathf.Sin(timeFactor) * 10f; // 10 degree bobbing amplitude
-                float armSway = Mathf.Cos(timeFactor) * 5f;  // 5 degree horizontal sway
+                float armBob = Mathf.Sin(timeFactor) * 10f;
+                float armSway = Mathf.Cos(timeFactor) * 5f;
 
-                // Apply walk rotation relative to original pose
                 leftArm.localRotation = originalLeftArmRot * Quaternion.Euler(leftArmWalkOffset + new Vector3(armBob, armSway, 0f));
                 rightArm.localRotation = originalRightArmRot * Quaternion.Euler(rightArmWalkOffset + new Vector3(-armBob, -armSway, 0f));
 
-                // Sway the entire visual mesh side to side
                 if (visualChild != null)
                 {
-                    float bodySway = Mathf.Sin(timeFactor) * 4f; // 4 degrees body wobble
+                    float bodySway = Mathf.Sin(timeFactor) * 4f;
                     visualChild.localRotation = Quaternion.Euler(0f, 0f, bodySway);
                 }
             }
             else
             {
-                // Idle posture: Arms down, slow breathing animation cycles
                 float breatheFactor = Time.time * 2f;
                 float breatheBob = Mathf.Sin(breatheFactor) * 3f;
 
@@ -163,10 +161,6 @@ public class LG_Enemy : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Processes damage taken by the enemy.
-    /// </summary>
-    /// <param name="damage">Amount of damage to apply.</param>
     public void TakeDamage(float damage)
     {
         if (currentHealth <= 0f) return;
@@ -221,18 +215,15 @@ public class LG_Enemy : MonoBehaviour
 
     private void SpawnDrop()
     {
-        // Instantiate a physical drop cube dynamically
         GameObject dropGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
         dropGO.name = $"{dropItemName}_Drop";
         dropGO.transform.position = transform.position + Vector3.up * 0.5f;
-        dropGO.transform.rotation = Quaternion.Euler(45f, 45f, 45f); // Diamante
+        dropGO.transform.rotation = Quaternion.Euler(45f, 45f, 45f);
         dropGO.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
 
-        // Add the collectible script
         LG_Collectible collectible = dropGO.AddComponent<LG_Collectible>();
         collectible.Initialize(dropItemName, dropAmount);
 
-        // Assign custom drop material if available
         if (dropMaterial != null)
         {
             Renderer r = dropGO.GetComponent<Renderer>();
@@ -243,7 +234,6 @@ public class LG_Enemy : MonoBehaviour
         }
         else
         {
-            // Fallback default green color
             Renderer r = dropGO.GetComponent<Renderer>();
             if (r != null)
             {
@@ -251,7 +241,6 @@ public class LG_Enemy : MonoBehaviour
             }
         }
 
-        // Set collider as Trigger so it can be picked up
         Collider c = dropGO.GetComponent<Collider>();
         if (c != null)
         {
@@ -287,7 +276,6 @@ public class LG_Enemy : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / duration;
-            // Sine wave for forward-thrust motion
             float thrust = Mathf.Sin(t * Mathf.PI) * 0.4f;
 
             leftArm.localPosition = originalLeftPos + Vector3.forward * thrust;
@@ -300,7 +288,6 @@ public class LG_Enemy : MonoBehaviour
         rightArm.localPosition = originalRightPos;
     }
 
-    // Helper utility to recursively find a named child bone
     private Transform FindDeepChild(Transform parent, string name)
     {
         foreach (Transform child in parent)
