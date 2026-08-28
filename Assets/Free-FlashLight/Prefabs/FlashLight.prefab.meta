@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 74b1d93aeb749c845bb0f4aed171c8ea
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 293680
+  packageName: Free-FlashLight
+  packageVersion: 1.0
+  assetPath: Assets/Free-FlashLight/Prefabs/FlashLight.prefab
+  uploadId: 685706
