@@ -7,37 +7,34 @@ public class LG_DialogueTrigger : MonoBehaviour
     public string[] dialogueLines;
 
     private bool playerInRange = false;
-    private LG_PlayerMovement pMove;
-    private LG_Shoot pShoot;
+    private GameObject playerRootRef;
 
     private void Update()
     {
-        // Iniciar interacción con 'E' si el jugador está cerca y no hay un diálogo activo
         if (playerInRange && !LG_DialogueManager.IsDialogueActive && Input.GetKeyDown(KeyCode.E))
         {
-            LG_DialogueManager.Instance.StartDialogue(dialogueLines, pMove, pShoot);
+            // Le pasamos todo el objeto raíz del jugador al Manager para que lo paralice correctamente
+            LG_DialogueManager.Instance.StartDialogue(dialogueLines, playerRootRef);
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Si el jugador entra a la zona (Box Collider IsTrigger)
-        if (other.CompareTag("Player") || other.GetComponent<LG_PlayerMovement>() != null)
+        // Revisamos si es el jugador el que entró al Trigger
+        if (other.CompareTag("Player") || other.GetComponentInParent<LG_PlayerHealth>() != null)
         {
             playerInRange = true;
-            pMove = other.GetComponent<LG_PlayerMovement>();
-            pShoot = other.GetComponent<LG_Shoot>();
-
-            // Pendiente: mostrar tooltip "Presiona E para hablar", por ahora para testing nosotros sabemos que está en rango y puede presionar E para iniciar el diálogo
-            // Probablemente cree un script nuevo para los tooltips y lo llame desde aquí, o lo haga directamente desde el LG_DialogueManager. Por ahora no lo implemento.
+            // Guardamos el padre principal del jugador para pasárselo al manager
+            playerRootRef = other.transform.root.gameObject;
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player") || other.GetComponent<LG_PlayerMovement>() != null)
+        if (other.CompareTag("Player") || other.GetComponentInParent<LG_PlayerHealth>() != null)
         {
             playerInRange = false;
+            playerRootRef = null;
         }
     }
 }

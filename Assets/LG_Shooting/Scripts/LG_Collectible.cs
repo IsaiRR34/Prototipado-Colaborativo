@@ -4,7 +4,7 @@ public class LG_Collectible : MonoBehaviour
 {
     [Header("Collectible Settings")]
     [Tooltip("Name of the item to add to the inventory.")]
-    [SerializeField] private string itemName = "Municion";
+    [SerializeField] private string itemName = "Ammo"; // Cambiado a Ammo por seguridad y compatibilidad
 
     [Tooltip("Quantity of the item to add.")]
     [SerializeField] private int amount = 5;
@@ -46,14 +46,9 @@ public class LG_Collectible : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // Try to get the inventory component on the colliding object
-        LG_Inventory inventory = other.GetComponent<LG_Inventory>();
-
-        // If the inventory wasn't on the collider itself, look in parents (like if it hit a child trigger)
-        if (inventory == null)
-        {
-            inventory = other.GetComponentInParent<LG_Inventory>();
-        }
+        // Optimizamos la búsqueda: GetComponentInParent busca en el objeto mismo y si no lo tiene, sube por la jerarquía.
+        // Esto es ideal por si el collider del jugador está en un objeto hijo, que ya nos pasó, por ahora funciona bien así.
+        LG_Inventory inventory = other.GetComponentInParent<LG_Inventory>();
 
         if (inventory != null)
         {

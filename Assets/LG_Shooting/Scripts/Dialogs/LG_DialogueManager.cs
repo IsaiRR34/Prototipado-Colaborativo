@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems; // Necesario para navegar con W/S y Flechas
+using TMPro; // Necesario para TextMeshPro
+using UnityEngine.EventSystems;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.InputSystem; // Para bloquear el nuevo Input System
 
 public class LG_DialogueManager : MonoBehaviour
 {
@@ -11,7 +13,7 @@ public class LG_DialogueManager : MonoBehaviour
 
     [Header("UI References")]
     [SerializeField] private GameObject dialoguePanel;
-    [SerializeField] private Text dialogueText;
+    [SerializeField] private TextMeshProUGUI dialogueText; // Cambiado a TMPro, ya que dejamos de usar Legacy, que es el modo compatible con el proyecto antiguo (versión 1 del equipo original)
     [SerializeField] private GameObject optionsContainer;
     [SerializeField] private Button truthButton;
     [SerializeField] private Button lieButton;
@@ -23,13 +25,11 @@ public class LG_DialogueManager : MonoBehaviour
     private bool isTyping = false;
     private string currentSentence;
 
-    // Fix - Referencias para bloquear al jugador cuando está en diálogo, sigo testeando funcionalidad y ajustando detalles
-    private LG_PlayerMovement playerMovement;
-    private LG_Shoot playerShoot;
+    // Referencia al jugador para bloquearlo
+    private GameObject playerObject;
 
     private void Awake()
     {
-        // Singleton pattern para acceder fácilmente desde cualquier script
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
@@ -41,7 +41,9 @@ public class LG_DialogueManager : MonoBehaviour
         dialoguePanel.SetActive(false);
         optionsContainer.SetActive(false);
 
-        // Asignar los eventos a los botones truthButton y lieButton
+        // Limpiamos y asignamos los eventos a los botones por código
+        truthButton.onClick.RemoveAllListeners();
+        lieButton.onClick.RemoveAllListeners();
         truthButton.onClick.AddListener(OnTruthSelected);
         lieButton.onClick.AddListener(OnLieSelected);
     }
@@ -50,12 +52,11 @@ public class LG_DialogueManager : MonoBehaviour
     {
         if (!IsDialogueActive) return;
 
-        // Avanzar diálogo con Espacio, F o Click (Solo si NO estamos mostrando las opciones) - Ajuste para diálogos largos, falta testear
+        // Avanzar diálogo (Solo si NO estamos mostrando las opciones)
         if (!optionsContainer.activeSelf && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(0)))
         {
             if (isTyping)
             {
-                // Si está escribiendo, saltar el efecto y mostrar texto completo
                 StopAllCoroutines();
                 dialogueText.text = currentSentence;
                 isTyping = false;
@@ -67,22 +68,17 @@ public class LG_DialogueManager : MonoBehaviour
         }
     }
 
-    public void StartDialogue(string[] dialogueLines, LG_PlayerMovement pMove, LG_Shoot pShoot)
+    public void StartDialogue(string[] dialogueLines, GameObject player)
     {
         IsDialogueActive = true;
         dialoguePanel.SetActive(true);
         optionsContainer.SetActive(false);
 
-        // Guardamos las referencias y bloqueamos al jugador
-        playerMovement = pMove;
-        playerShoot = pShoot;
-
-        if (playerMovement != null) playerMovement.enabled = false;
-        if (playerShoot != null) playerShoot.enabled = false;
+        // Guardamos la referencia del jugador y lo bloqueamos
+        playerObject = player;
+        LockPlayer(true);
 
         sentences.Clear();
-
-        // Encolamos los párrafos cortos
         foreach (string line in dialogueLines)
         {
             sentences.Enqueue(line);
@@ -93,7 +89,6 @@ public class LG_DialogueManager : MonoBehaviour
 
     public void DisplayNextSentence()
     {
-        // Si ya no hay más texto, mostramos las opciones
         if (sentences.Count == 0)
         {
             ShowOptions();
@@ -121,28 +116,32 @@ public class LG_DialogueManager : MonoBehaviour
     {
         optionsContainer.SetActive(true);
 
-        // Esto es CLAVE para usar W/S o Flechas. Seleccionamos el primer botón automáticamente.
-        EventSystem.current.SetSelectedGameObject(null);
-        EventSystem.current.SetSelectedGameObject(truthButton.gameObject);
+        // Protección para evitar el NullReferenceException
+        if (EventSystem.current != null)
+        {
+            EventSystem.current.SetSelectedGameObject(null);
+            EventSystem.current.SetSelectedGameObject(truthButton.gameObject);
+        }
+        else
+        {
+            // Advertencia si no hay un EventSystem en la escena, porque por alguna razón no se agrega automáticamente
+            Debug.LogWarning("Falta un EventSystem en la escena. Los botones no funcionarán con teclado.");
+        }
     }
 
-    private void OnTruthSelected()
+    public void OnTruthSelected()
     {
-        Debug.Log("Decidiste decir la VERDAD.");
         EndDialogue();
     }
 
-    private void OnLieSelected()
+    public void OnLieSelected()
     {
-        Debug.Log("Decidiste MENTIR. ¡Consecuencia fatal!");
-
-        // Ejecutamos la penalización llamando a la salud del jugador
-        LG_PlayerHealth health = Object.FindFirstObjectByType<LG_PlayerHealth>();
+        // Instakill buscando el script de vida en la jerarquía del jugador
+        LG_PlayerHealth health = playerObject.GetComponentInChildren<LG_PlayerHealth>();
         if (health != null)
         {
-            health.TakeDamage(health.GetMaxHealth()); // Daño masivo / instakill
+            health.TakeDamage(1000f); // Daño masivo
         }
-
         EndDialogue();
     }
 
@@ -152,8 +151,47 @@ public class LG_DialogueManager : MonoBehaviour
         dialoguePanel.SetActive(false);
         optionsContainer.SetActive(false);
 
-        // Desbloqueamos al jugador
-        if (playerMovement != null) playerMovement.enabled = true;
-        if (playerShoot != null) playerShoot.enabled = true;
+        LockPlayer(false); // Desbloqueamos al jugador
+    }
+
+    private void LockPlayer(bool lockInput)
+    {
+        if (playerObject == null) return;
+
+        // 1. Bloqueamos el componente PlayerInput completo... en teoría...
+        PlayerInput pInput = playerObject.GetComponentInChildren<PlayerInput>();
+        if (pInput != null) pInput.enabled = !lockInput;
+
+        // 2. Bloqueo de armas para que no sea posible disparar/cambiar de arma mientras el player está en diálogo // FIX NEW VERSION, el anterior no funcionaba
+        LG_Shoot pShoot = playerObject.GetComponentInChildren<LG_Shoot>();
+        if (pShoot != null) pShoot.enabled = !lockInput;
+
+        Hand pHand = playerObject.GetComponentInChildren<Hand>();
+        if (pHand != null) pHand.enabled = !lockInput;
+
+        // 3. Deshabilitamos cualquier script que controle movimiento y rotación de cámara como paso adicional para asegurarnos de que el jugador no pueda moverse ni mirar alrededor durante el diálogo
+        // Nota: Esto es algo genérico y puede mejorarse, por ahora lo usamos para testing.
+        MonoBehaviour[] scripts = playerObject.GetComponentsInChildren<MonoBehaviour>();
+        foreach (var script in scripts)
+        {
+            string scriptName = script.GetType().Name;
+            // Buscamos palabras clave en los scripts del jugador
+            if (scriptName.Contains("Move") || scriptName.Contains("Look") || scriptName.Contains("FPS"))
+            {
+                script.enabled = !lockInput;
+            }
+        }
+
+        // 4. Habilitar el mouse para los botones
+        if (lockInput)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 }
