@@ -34,6 +34,9 @@ public class LG_Enemy : MonoBehaviour
     [SerializeField] private float attackCooldown = 1.5f;
     private float nextAttackTime;
 
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioClip hurtSound;
+
     private Renderer[] childRenderers;
     private Color[] originalColors;
     private float flashTimer;
@@ -46,6 +49,13 @@ public class LG_Enemy : MonoBehaviour
     private void Start()
     {
         currentHealth = maxHealth;
+
+#if UNITY_EDITOR
+        if (hurtSound == null)
+        {
+            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Zombie_Hit.wav");
+        }
+#endif
 
         // Automatically locate Player if none is assigned
         if (target == null)
@@ -175,6 +185,11 @@ public class LG_Enemy : MonoBehaviour
         Debug.Log($"[LG_Enemy] {gameObject.name} hit! Health: {currentHealth}/{maxHealth}", this);
 
         FlashRed();
+
+        if (hurtSound != null)
+        {
+            AudioSource.PlayClipAtPoint(hurtSound, transform.position, 0.95f);
+        }
 
         if (currentHealth <= 0f)
         {

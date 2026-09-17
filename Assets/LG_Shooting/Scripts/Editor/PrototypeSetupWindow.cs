@@ -74,6 +74,21 @@ public class PrototypeSetupWindow : EditorWindow
         Material materialBattery = ObtenerOCrearMaterialURP("Assets/LG_Shooting/LGAssets/Materials/Mat_Collectible_Battery.mat", new Color(0.2f, 0.6f, 0.9f));
         Material materialKey = ObtenerOCrearMaterialURP("Assets/LG_Shooting/LGAssets/Materials/Mat_Collectible_Key.mat", new Color(0.9f, 0.2f, 0.8f));
 
+        // Clips de Audio SFX
+        string audioDir = "Assets/LG_Shooting/LGAssets/Audio";
+        AudioClip sfxShoot = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Shoot.wav");
+        AudioClip sfxReload = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Reload.wav");
+        AudioClip sfxEmpty = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Empty.wav");
+        AudioClip sfxSwing = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Melee_Swing.wav");
+        AudioClip sfxHit = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Melee_Hit.wav");
+        AudioClip sfxPickup = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Pickup.wav");
+        AudioClip sfxPickupAmmo = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Pickup_Ammo.wav");
+        AudioClip sfxPickupBattery = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Pickup_Battery.wav");
+        AudioClip sfxPickupKey = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Pickup_Key.wav");
+        AudioClip sfxZombieHit = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Zombie_Hit.wav");
+        AudioClip sfxPlayerHurt = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Player_Hurt.wav");
+        AudioClip sfxUnlock = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Door_Unlock.wav");
+
         // Asegurar Luz Direccional para apreciar las texturas
         Light dirLight = FindObjectOfType<Light>();
         if (dirLight == null)
@@ -229,6 +244,9 @@ public class PrototypeSetupWindow : EditorWindow
         shootSO.FindProperty("bulletPool").objectReferenceValue = poolComp;
         shootSO.FindProperty("firePoint").objectReferenceValue = firePoint;
         shootSO.FindProperty("fireRate").floatValue = 0.2f;
+        if (sfxShoot != null) shootSO.FindProperty("shootSound").objectReferenceValue = sfxShoot;
+        if (sfxReload != null) shootSO.FindProperty("reloadSound").objectReferenceValue = sfxReload;
+        if (sfxEmpty != null) shootSO.FindProperty("emptySound").objectReferenceValue = sfxEmpty;
         shootSO.ApplyModifiedProperties();
 
         // Añadir LG_Inventory
@@ -238,10 +256,17 @@ public class PrototypeSetupWindow : EditorWindow
         // Añadir LG_PlayerHealth
         LG_PlayerHealth playerHealth = player.GetComponent<LG_PlayerHealth>();
         if (playerHealth == null) playerHealth = player.AddComponent<LG_PlayerHealth>();
+        SerializedObject healthSO = new SerializedObject(playerHealth);
+        if (sfxPlayerHurt != null) healthSO.FindProperty("hurtSound").objectReferenceValue = sfxPlayerHurt;
+        healthSO.ApplyModifiedProperties();
 
         // Añadir Hand para armas y ataque melee
         Hand handComp = player.GetComponent<Hand>();
         if (handComp == null) handComp = player.AddComponent<Hand>();
+        SerializedObject handSO = new SerializedObject(handComp);
+        if (sfxSwing != null) handSO.FindProperty("swingSound").objectReferenceValue = sfxSwing;
+        if (sfxHit != null) handSO.FindProperty("hitSound").objectReferenceValue = sfxHit;
+        handSO.ApplyModifiedProperties();
 
         Undo.RegisterCreatedObjectUndo(player, "Configurar Player");
 
@@ -317,10 +342,10 @@ public class PrototypeSetupWindow : EditorWindow
             DestroyImmediate(colRoot.transform.GetChild(i).gameObject);
         }
 
-        // Coleccionables posicionados en el recorrido
-        CrearColeccionable(colRoot.transform, "Municion_Box_Green", new Vector3(4f, 0.6f, -6f), "Munición", 10, materialMunicion);
-        CrearColeccionable(colRoot.transform, "Battery_Pack_Blue", new Vector3(-4f, 0.6f, -6f), "Bateria", 1, materialBattery);
-        CrearColeccionable(colRoot.transform, "Red_Key_Pink", new Vector3(0f, 0.6f, 9f), "Llave Roja", 1, materialKey);
+        // Coleccionables posicionados en el recorrido con audios unicos
+        CrearColeccionable(colRoot.transform, "Municion_Box_Green", new Vector3(4f, 0.6f, -6f), "Munición", 10, materialMunicion, sfxPickupAmmo);
+        CrearColeccionable(colRoot.transform, "Battery_Pack_Blue", new Vector3(-4f, 0.6f, -6f), "Bateria", 1, materialBattery, sfxPickupBattery);
+        CrearColeccionable(colRoot.transform, "Red_Key_Pink", new Vector3(0f, 0.6f, 9f), "Llave Roja", 1, materialKey, sfxPickupKey);
         Undo.RegisterCreatedObjectUndo(colRoot, "Crear Coleccionables Root");
 
         // 9. Crear objetivos fisicos interactivos (Torre de cubos al centro)
@@ -371,20 +396,21 @@ public class PrototypeSetupWindow : EditorWindow
         Material materialBatteryDrop = AssetDatabase.LoadAssetAtPath<Material>("Assets/LG_Shooting/LGAssets/Materials/Mat_Collectible_Battery.mat");
         Material materialAmmoDrop = AssetDatabase.LoadAssetAtPath<Material>("Assets/LG_Shooting/LGAssets/Materials/Mat_Collectible_Municion.mat");
 
-        CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Izquierda", new Vector3(-6f, 1f, 4f), materialEnemigo, materialBatteryDrop, "Bateria", 1);
-        CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Derecha", new Vector3(6f, 1f, 4f), materialEnemigo, materialAmmoDrop, "Munición", 5);
+        CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Izquierda", new Vector3(-6f, 1f, 4f), materialEnemigo, materialBatteryDrop, "Bateria", 1, sfxZombieHit);
+        CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Derecha", new Vector3(6f, 1f, 4f), materialEnemigo, materialAmmoDrop, "Munición", 5, sfxZombieHit);
         Undo.RegisterCreatedObjectUndo(enemigosRoot, "Crear Enemigos Root");
 
         // 11. Crear Puerta de Salida en la pared Norte
-        CrearPuertaSalida(new Vector3(0f, 0f, 14.8f), materialPuerta, materialMarco);
+        CrearPuertaSalida(new Vector3(0f, 0f, 14.8f), materialPuerta, materialMarco, sfxUnlock, sfxEmpty);
 
         EditorUtility.DisplayDialog("Exito MVP", 
             "¡El prototipo MVP se ha configurado con exito!\n\n" +
             "✔ Arena cerrada con paredes perimetrales texturizadas y colisiones.\n" +
-            "✔ Texturas URP aplicadas en Suelo, Paredes y Puerta.\n" +
+            "✔ Texturas URP con Mapas de Normales (Suelo, Paredes y Puerta).\n" +
             "✔ Puerta blindada de salida integrada al fondo (se abre con la Llave Roja).\n" +
-            "✔ Combate completo: Disparo de pistola y ataque cuerpo a cuerpo con bate.\n" +
-            "✔ HUD completo con Vida, Estamina, Inventario, Balas y Reticula (Crosshair).\n" +
+            "✔ Combate completo con SFX: Disparo, Recarga, Gatillazo seco y Swing/Hit de Bate.\n" +
+            "✔ HUD profesional en esquina inferior derecha con indicador dinámico de munición.\n" +
+            "✔ Sonidos de recolección de ítems y apertura de compuerta.\n" +
             "✔ Zombis 3D animados y objetivos destructibles.\n\n" +
             "¡Haz clic en Play para probar el MVP!", 
             "OK");
@@ -447,7 +473,7 @@ public class PrototypeSetupWindow : EditorWindow
         }
     }
 
-    private static void CrearPuertaSalida(Vector3 position, Material matPuerta, Material matMarco)
+    private static void CrearPuertaSalida(Vector3 position, Material matPuerta, Material matMarco, AudioClip sfxUnlock = null, AudioClip sfxDenied = null)
     {
         GameObject puertaRoot = GameObject.Find("Puerta_Salida");
         if (puertaRoot == null)
@@ -509,6 +535,8 @@ public class PrototypeSetupWindow : EditorWindow
         doorSO.FindProperty("openAngle").floatValue = -95f;
         doorSO.FindProperty("loadVictoryScene").boolValue = true;
         doorSO.FindProperty("victorySceneIndex").intValue = 2; // Victory
+        if (sfxUnlock != null) doorSO.FindProperty("unlockSound").objectReferenceValue = sfxUnlock;
+        if (sfxDenied != null) doorSO.FindProperty("lockedDeniedSound").objectReferenceValue = sfxDenied;
         doorSO.ApplyModifiedProperties();
 
         // Collider Trigger para interacción
@@ -826,7 +854,7 @@ public class PrototypeSetupWindow : EditorWindow
         img.color = new Color(1f, 1f, 1f, 0.85f);
     }
 
-    private static void CrearColeccionable(Transform parent, string goName, Vector3 position, string itemName, int amount, Material mat)
+    private static void CrearColeccionable(Transform parent, string goName, Vector3 position, string itemName, int amount, Material mat, AudioClip sfxPickup = null)
     {
         GameObject colGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
         colGO.name = goName;
@@ -843,6 +871,7 @@ public class PrototypeSetupWindow : EditorWindow
         colSO.FindProperty("rotationSpeed").floatValue = 55f;
         colSO.FindProperty("bobFrequency").floatValue = 2f;
         colSO.FindProperty("bobAmplitude").floatValue = 0.15f;
+        if (sfxPickup != null) colSO.FindProperty("pickupSound").objectReferenceValue = sfxPickup;
         colSO.ApplyModifiedProperties();
 
         colGO.GetComponent<Renderer>().sharedMaterial = mat;
@@ -853,7 +882,7 @@ public class PrototypeSetupWindow : EditorWindow
         Undo.RegisterCreatedObjectUndo(colGO, $"Crear Coleccionable {goName}");
     }
 
-    private static void CrearEnemigoPrototipo(Transform parent, string goName, Vector3 position, Material matEnemigo, Material matDrop, string dropItem, int dropQty)
+    private static void CrearEnemigoPrototipo(Transform parent, string goName, Vector3 position, Material matEnemigo, Material matDrop, string dropItem, int dropQty, AudioClip sfxHurt = null)
     {
         string zombiePrefabPath = "Assets/ZombieMale_AAB/Prefabs/URP/ZombieMale_AAB_URP.prefab";
         GameObject zombiePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(zombiePrefabPath);
@@ -906,6 +935,7 @@ public class PrototypeSetupWindow : EditorWindow
         enemySO.FindProperty("dropItemName").stringValue = dropItem;
         enemySO.FindProperty("dropAmount").intValue = dropQty;
         enemySO.FindProperty("dropMaterial").objectReferenceValue = matDrop;
+        if (sfxHurt != null) enemySO.FindProperty("hurtSound").objectReferenceValue = sfxHurt;
         
         GameObject player = GameObject.Find("Player (RI + LG)");
         if (player != null)

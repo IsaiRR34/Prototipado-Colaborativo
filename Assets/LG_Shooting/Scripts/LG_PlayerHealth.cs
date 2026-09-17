@@ -10,9 +10,28 @@ public class LG_PlayerHealth : MonoBehaviour
     public event Action OnHealthChanged;
     public event Action OnPlayerDeath;
 
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip hurtSound;
+
     private void Start()
     {
         currentHealth = maxHealth;
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f; // 2D estéreo local
+        }
+
+#if UNITY_EDITOR
+        if (hurtSound == null)
+        {
+            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Player_Hurt.wav");
+        }
+#endif
     }
 
     /// <summary>
@@ -26,6 +45,11 @@ public class LG_PlayerHealth : MonoBehaviour
         currentHealth -= damage;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
         Debug.Log($"[LG_PlayerHealth] Player took {damage} damage! Current health: {currentHealth}/{maxHealth}", this);
+
+        if (audioSource != null && hurtSound != null)
+        {
+            audioSource.PlayOneShot(hurtSound, 1.0f);
+        }
 
         OnHealthChanged?.Invoke();
 

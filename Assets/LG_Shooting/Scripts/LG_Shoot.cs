@@ -25,6 +25,12 @@ public class LG_Shoot : MonoBehaviour
     [Header("UI HUD")]
     [SerializeField] private TextMeshProUGUI ammoText;
 
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip shootSound;
+    [SerializeField] private AudioClip reloadSound;
+    [SerializeField] private AudioClip emptySound;
+
     [Header("Inputs")]
     [SerializeField] private InputActionReference shootAction;
     private InputAction shootActionInstance;
@@ -47,6 +53,20 @@ public class LG_Shoot : MonoBehaviour
 
     private void Start()
     {
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f; // Audio 2D estéreo para el jugador
+        }
+
+#if UNITY_EDITOR
+        if (shootSound == null) shootSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Shoot.wav");
+        if (reloadSound == null) reloadSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Reload.wav");
+        if (emptySound == null) emptySound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Empty.wav");
+#endif
+
         if (playerInventory == null)
         {
             playerInventory = GetComponentInParent<LG_Inventory>();
@@ -166,6 +186,12 @@ public class LG_Shoot : MonoBehaviour
                 ShootBullet();
                 fireRateTimer = fireRate;
             }
+            else
+            {
+                // Sonido de gatillo sin balas (Dry Fire)
+                PlayAudio(emptySound, 0.7f);
+                fireRateTimer = fireRate * 1.5f;
+            }
         }
     }
 
@@ -173,6 +199,7 @@ public class LG_Shoot : MonoBehaviour
     {
         currentClip--;
         UpdateAmmoUI();
+        PlayAudio(shootSound, 1.0f);
 
         if (bulletPool == null)
         {
@@ -195,6 +222,7 @@ public class LG_Shoot : MonoBehaviour
     {
         isReloading = true;
         UpdateAmmoUI();
+        PlayAudio(reloadSound, 0.9f);
 
         yield return new WaitForSeconds(1.5f);
 
@@ -263,5 +291,16 @@ public class LG_Shoot : MonoBehaviour
         ammoText.text = $"<b><size=38><color={clipColor}>{currentClip}</color></size></b>" +
                         $"<size=20><color=#64748B> / </color><color=#CBD5E1>{reserveAmmo}</color></size>\n" +
                         $"{statusLine}";
+    }
+
+    private void PlayAudio(AudioClip clip, float volume = 1.0f)
+    {
+        if (clip == null) return;
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        audioSource.PlayOneShot(clip, volume);
     }
 }

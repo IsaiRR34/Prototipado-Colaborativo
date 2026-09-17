@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
 
@@ -18,6 +18,11 @@ public class Door : MonoBehaviour
     [SerializeField] private float victoryDelay = 1.2f;
     [SerializeField] private int victorySceneIndex = 2; // Indice en Build Settings (Victory.unity)
 
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip unlockSound;
+    [SerializeField] private AudioClip lockedDeniedSound;
+
     private bool isPlayerInRange = false;
     private bool isOpen = false;
     private bool isOpening = false;
@@ -25,6 +30,21 @@ public class Door : MonoBehaviour
 
     private void Start()
     {
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 1f; // Audio posicional 3D
+            audioSource.minDistance = 2f;
+            audioSource.maxDistance = 20f;
+        }
+
+#if UNITY_EDITOR
+        if (unlockSound == null) unlockSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Door_Unlock.wav");
+        if (lockedDeniedSound == null) lockedDeniedSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Empty.wav");
+#endif
+
         if (doorHinge == null)
         {
             Transform meshChild = transform.Find("Door_Mesh");
@@ -96,11 +116,20 @@ public class Door : MonoBehaviour
                 currentInventory.RemoveItem(requiredKeyName, 1);
             }
 
+            if (audioSource != null && unlockSound != null)
+            {
+                audioSource.PlayOneShot(unlockSound, 1.0f);
+            }
+
             Debug.Log($"[Door] ¡Llave '{requiredKeyName}' aceptada! Abriendo puerta...");
             StartCoroutine(OpenDoorRoutine());
         }
         else
         {
+            if (audioSource != null && lockedDeniedSound != null)
+            {
+                audioSource.PlayOneShot(lockedDeniedSound, 0.8f);
+            }
             Debug.LogWarning($"[Door] No puedes abrir la puerta. Falta la '{requiredKeyName}'.");
         }
     }
