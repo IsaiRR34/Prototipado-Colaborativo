@@ -19,10 +19,15 @@ public class LG_Collectible : MonoBehaviour
     [Tooltip("Amplitud de oscilación vertical.")]
     [SerializeField] private float bobAmplitude = 0.15f;
 
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioClip pickupSound;
+
     private Vector3 startPos;
 
     private void Start()
     {
+        AutoAssignSoundIfMissing();
+
         startPos = transform.position;
 
         Collider col = GetComponent<Collider>();
@@ -47,6 +52,11 @@ public class LG_Collectible : MonoBehaviour
 
         if (inventory != null)
         {
+            if (pickupSound != null)
+            {
+                AudioSource.PlayClipAtPoint(pickupSound, transform.position, 1.0f);
+            }
+
             inventory.AddItem(itemName, amount);
             Debug.Log($"[LG_Collectible] ¡Jugador recogió {amount}x {itemName}!");
             Destroy(gameObject);
@@ -57,5 +67,39 @@ public class LG_Collectible : MonoBehaviour
     {
         itemName = name;
         amount = qty;
+        AutoAssignSoundIfMissing();
+    }
+
+    public void SetPickupSound(AudioClip clip)
+    {
+        pickupSound = clip;
+    }
+
+    private void AutoAssignSoundIfMissing()
+    {
+#if UNITY_EDITOR
+        if (pickupSound == null)
+        {
+            string clean = (itemName != null) ? itemName.ToLower() : "";
+            string dir = "Assets/LG_Shooting/LGAssets/Audio";
+            if (clean.Contains("muni"))
+            {
+                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup_Ammo.wav");
+            }
+            else if (clean.Contains("bater") || clean.Contains("battery"))
+            {
+                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup_Battery.wav");
+            }
+            else if (clean.Contains("llave") || clean.Contains("key"))
+            {
+                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup_Key.wav");
+            }
+
+            if (pickupSound == null)
+            {
+                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup.wav");
+            }
+        }
+#endif
     }
 }
