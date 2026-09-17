@@ -24,9 +24,22 @@ public class LG_Inventory : MonoBehaviour
 
     public event Action OnInventoryChanged;
 
+    private string NormalizeItemName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        if (name.Equals("Ammo", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("Municion", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("Munici√≥n", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Munici√≥n";
+        }
+        return name;
+    }
+
     public void AddItem(string itemName, int amount)
     {
         if (amount <= 0) return;
+        itemName = NormalizeItemName(itemName);
 
         if (itemDictionary.ContainsKey(itemName))
             itemDictionary[itemName] += amount;
@@ -37,17 +50,17 @@ public class LG_Inventory : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    // NUEVA FUNCI”N: Necesaria para consumir municiÛn o curas
     public void RemoveItem(string itemName, int amount)
     {
         if (amount <= 0) return;
+        itemName = NormalizeItemName(itemName);
 
         if (itemDictionary.ContainsKey(itemName))
         {
             itemDictionary[itemName] -= amount;
             if (itemDictionary[itemName] <= 0)
             {
-                itemDictionary.Remove(itemName); // Si se acaban, lo quitamos del diccionario
+                itemDictionary.Remove(itemName);
             }
             SyncInspectorList();
             OnInventoryChanged?.Invoke();
@@ -56,6 +69,7 @@ public class LG_Inventory : MonoBehaviour
 
     public int GetItemCount(string itemName)
     {
+        itemName = NormalizeItemName(itemName);
         if (itemDictionary.TryGetValue(itemName, out int count)) return count;
         return 0;
     }

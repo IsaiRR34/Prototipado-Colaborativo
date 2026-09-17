@@ -3,20 +3,20 @@ using UnityEngine;
 public class LG_Collectible : MonoBehaviour
 {
     [Header("Collectible Settings")]
-    [Tooltip("Name of the item to add to the inventory.")]
-    [SerializeField] private string itemName = "Ammo"; // Cambiado a Ammo por seguridad y compatibilidad
+    [Tooltip("Nombre del ítem a añadir al inventario.")]
+    [SerializeField] private string itemName = "Munición";
 
-    [Tooltip("Quantity of the item to add.")]
+    [Tooltip("Cantidad del ítem a añadir.")]
     [SerializeField] private int amount = 5;
 
     [Header("Movement Animation")]
-    [Tooltip("Speed of object rotation.")]
+    [Tooltip("Velocidad de rotación.")]
     [SerializeField] private float rotationSpeed = 50f;
 
-    [Tooltip("Frequency of bobbing up and down.")]
+    [Tooltip("Frecuencia de oscilación vertical.")]
     [SerializeField] private float bobFrequency = 2f;
 
-    [Tooltip("Amplitude of bobbing up and down.")]
+    [Tooltip("Amplitud de oscilación vertical.")]
     [SerializeField] private float bobAmplitude = 0.15f;
 
     private Vector3 startPos;
@@ -25,7 +25,6 @@ public class LG_Collectible : MonoBehaviour
     {
         startPos = transform.position;
 
-        // Ensure collider is set to trigger
         Collider col = GetComponent<Collider>();
         if (col != null)
         {
@@ -35,10 +34,8 @@ public class LG_Collectible : MonoBehaviour
 
     private void Update()
     {
-        // Rotate item
         transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime, Space.World);
 
-        // Bob up and down
         Vector3 tempPos = startPos;
         tempPos.y += Mathf.Sin(Time.time * bobFrequency) * bobAmplitude;
         transform.position = tempPos;
@@ -46,26 +43,16 @@ public class LG_Collectible : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // Optimizamos la b�squeda: GetComponentInParent busca en el objeto mismo y si no lo tiene, sube por la jerarqu�a.
-        // Esto es ideal por si el collider del jugador est� en un objeto hijo, que ya nos pas�, por ahora funciona bien as�.
         LG_Inventory inventory = other.GetComponentInParent<LG_Inventory>();
 
         if (inventory != null)
         {
-            // Add item to inventory
             inventory.AddItem(itemName, amount);
-
-            // Log pick up for feedback
-            Debug.Log($"[LG_Collectible] Player picked up {amount}x {itemName}!");
-
-            // Destroy the collectible object
+            Debug.Log($"[LG_Collectible] ¡Jugador recogió {amount}x {itemName}!");
             Destroy(gameObject);
         }
     }
 
-    /// <summary>
-    /// Programmatically sets up the collectible item properties.
-    /// </summary>
     public void Initialize(string name, int qty)
     {
         itemName = name;
