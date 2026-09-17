@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using TMPro; // Necesario para la UI
+using TMPro;
 using System.Collections;
 
 public class LG_Shoot : MonoBehaviour
@@ -9,20 +9,18 @@ public class LG_Shoot : MonoBehaviour
     [SerializeField] private LG_ObjectPool bulletPool;
     [SerializeField] private Transform firePoint;
 
-    [Header("Configuración de Arma")]
-    [SerializeField] private float fireRate = 1f;
+    [Header("ConfiguraciÃ³n de Arma")]
+    [SerializeField] private float fireRate = 0.2f;
     private float fireRateTimer = 0f;
     private bool canShoot = true;
     private bool isReloading = false;
 
-    [Header("Sistema de Munición")]
-    // Referencia al inventario para descontar balas al recargar
+    [Header("Sistema de MuniciÃ³n")]
     [SerializeField] private LG_Inventory playerInventory;
-    [SerializeField] private string ammoItemName = "Ammo"; // Nombre del ítem en el inventario
+    [SerializeField] private string ammoItemName = "MuniciÃ³n";
 
     public int maxClipSize = 12;
     public int currentClip;
-    // totalAmmo se elimina porque ahora leemos las balas directamente del inventario (LG_Inventory)
 
     [Header("UI HUD")]
     [SerializeField] private TextMeshProUGUI ammoText;
@@ -49,7 +47,58 @@ public class LG_Shoot : MonoBehaviour
 
     private void Start()
     {
-        // Nos suscribimos a los cambios del inventario para que el HUD se actualice si recogemos balas
+        if (playerInventory == null)
+        {
+            playerInventory = GetComponentInParent<LG_Inventory>();
+            if (playerInventory == null) playerInventory = FindObjectOfType<LG_Inventory>();
+        }
+
+        if (ammoText == null)
+        {
+            // Priorizar el cuadro de municion en la esquina inferior derecha
+            GameObject container = GameObject.Find("MunicionContainer");
+            if (container != null)
+            {
+                ammoText = container.GetComponentInChildren<TextMeshProUGUI>();
+            }
+
+            if (ammoText == null)
+            {
+                GameObject panel = GameObject.Find("MunicionPannel");
+                if (panel != null)
+                {
+                    ammoText = panel.GetComponentInChildren<TextMeshProUGUI>();
+                }
+            }
+
+            if (ammoText == null)
+            {
+                GameObject ammoGo = GameObject.Find("MunicionText");
+                if (ammoGo == null) ammoGo = GameObject.Find("AmmoText");
+                if (ammoGo != null)
+                {
+                    ammoText = ammoGo.GetComponent<TextMeshProUGUI>();
+                }
+            }
+        }
+
+        // Limpiar cualquier texto de municion suelto en la esquina superior del Canvas
+        if (ammoText != null)
+        {
+            var canvas = FindObjectOfType<Canvas>();
+            if (canvas != null)
+            {
+                for (int i = canvas.transform.childCount - 1; i >= 0; i--)
+                {
+                    Transform child = canvas.transform.GetChild(i);
+                    if ((child.name == "MunicionText" || child.name == "AmmoText") && child != ammoText.transform && child != ammoText.transform.parent)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                }
+            }
+        }
+
         if (playerInventory != null)
         {
             playerInventory.OnInventoryChanged += UpdateAmmoUI;
@@ -60,7 +109,6 @@ public class LG_Shoot : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Limpiamos la suscripción para evitar errores de memoria
         if (playerInventory != null)
         {
             playerInventory.OnInventoryChanged -= UpdateAmmoUI;
@@ -73,38 +121,50 @@ public class LG_Shoot : MonoBehaviour
     public void EnableShooting(bool enable)
     {
         canShoot = enable;
-
-        // Ocultar el HUD de munición si cambiamos al bat o a la linterna
-        if (ammoText != null) ammoText.gameObject.SetActive(enable);
+        if (ammoText != null)
+        {
+            Transform parent = ammoText.transform.parent;
+            if (parent != null && (parent.name == "MunicionPannel" || parent.name == "MunicionContainer"))
+            {
+                if (parent.parent != null && parent.parent.name == "MunicionContainer")
+                {
+                    parent.parent.gameObject.SetActive(enable);
+                }
+                else
+                {
+                    parent.gameObject.SetActive(enable);
+                }
+            }
+            else
+            {
+                ammoText.gameObject.SetActive(enable);
+            }
+        }
     }
 
     private void Update()
     {
         fireRateTimer -= Time.deltaTime;
 
-        if (!canShoot || isReloading || shootActionInstance == null) return;
+        if (!canShoot || isReloading) return;
 
-        // Obtenemos la cantidad real de balas guardadas en el inventario
-        int reserveAmmo = playerInventory != null ? playerInventory.GetItemCount(ammoItemName) : 0;
+        int reserveAmmo = GetTotalReserveAmmo();
 
-        // Lógica de Recarga (Tecla R respetando GDD)
+        // Recarga con tecla R
         if (Input.GetKeyDown(KeyCode.R) && currentClip < maxClipSize && reserveAmmo > 0)
         {
             StartCoroutine(ReloadRoutine());
             return;
         }
 
-        // Lógica de Disparo
-        if (shootActionInstance.IsPressed() && fireRateTimer <= 0f)
+        bool wantsToShoot = (shootActionInstance != null && shootActionInstance.IsPressed()) || Input.GetMouseButton(0);
+
+        if (wantsToShoot && fireRateTimer <= 0f)
         {
             if (currentClip > 0)
             {
                 ShootBullet();
                 fireRateTimer = fireRate;
-            }
-            else
-            {
-                // Pending: empty clip sound or feedback...
             }
         }
     }
@@ -114,7 +174,12 @@ public class LG_Shoot : MonoBehaviour
         currentClip--;
         UpdateAmmoUI();
 
-        GameObject bulletObj = bulletPool.Get();
+        if (bulletPool == null)
+        {
+            bulletPool = FindObjectOfType<LG_ObjectPool>();
+        }
+
+        GameObject bulletObj = bulletPool != null ? bulletPool.Get() : null;
         if (bulletObj != null)
         {
             Transform spawnSource = firePoint != null ? firePoint : transform;
@@ -129,20 +194,17 @@ public class LG_Shoot : MonoBehaviour
     private IEnumerator ReloadRoutine()
     {
         isReloading = true;
-        if (ammoText != null) ammoText.text = "Recargando...";
+        UpdateAmmoUI();
 
-        // Tiempo de espera para simular la animación de recarga, ajustaremos posteriormente según la animación que se use
         yield return new WaitForSeconds(1.5f);
 
         int ammoNeeded = maxClipSize - currentClip;
-        int reserveAmmo = playerInventory != null ? playerInventory.GetItemCount(ammoItemName) : 0;
+        int reserveAmmo = GetTotalReserveAmmo();
 
-        // Calculamos cuántas balas reales podemos recargar
         int ammoToReload = Mathf.Min(ammoNeeded, reserveAmmo);
 
         if (ammoToReload > 0 && playerInventory != null)
         {
-            // Consumimos las balas del inventario
             playerInventory.RemoveItem(ammoItemName, ammoToReload);
             currentClip += ammoToReload;
         }
@@ -151,9 +213,7 @@ public class LG_Shoot : MonoBehaviour
         UpdateAmmoUI();
     }
 
-    // Función pública para que los consumibles/pickups te den más balas 
-    // (Aviso: Si usas el inventario directamente con AddItem, esta función ya no es estrictamente necesaria, pero se deja por compatibilidad)
-    public void AddAmmo(int amount)
+    public void AddMunicion(int amount)
     {
         if (playerInventory != null)
         {
@@ -161,13 +221,47 @@ public class LG_Shoot : MonoBehaviour
         }
     }
 
+    public void AddAmmo(int amount)
+    {
+        AddMunicion(amount);
+    }
+
+    private int GetTotalReserveAmmo()
+    {
+        if (playerInventory == null) return 0;
+        return playerInventory.GetItemCount(ammoItemName);
+    }
+
     private void UpdateAmmoUI()
     {
-        if (ammoText != null)
+        if (ammoText == null) return;
+
+        if (isReloading)
         {
-            // Consultamos la munición de reserva actual del inventario para la UI
-            int reserveAmmo = playerInventory != null ? playerInventory.GetItemCount(ammoItemName) : 0;
-            ammoText.text = $"{currentClip} / {reserveAmmo}";
+            ammoText.text = "<b><size=22><color=#FBBF24>RECARGANDO...</color></size></b>\n<size=11><color=#94A3B8>PISTOLA 9MM</color></size>";
+            return;
         }
+
+        int reserveAmmo = GetTotalReserveAmmo();
+
+        string clipColor = "#FFFFFF";
+        string statusLine = "<size=11><color=#38BDF8><b>PISTOLA 9MM</b></color></size>";
+
+        if (currentClip == 0)
+        {
+            clipColor = "#EF4444";
+            statusLine = reserveAmmo > 0 
+                ? "<size=12><color=#FBBF24><b>[ R ] RECARGAR</b></color></size>" 
+                : "<size=11><color=#EF4444><b>SIN MUNICIÃ“N</b></color></size>";
+        }
+        else if (currentClip <= 3)
+        {
+            clipColor = "#F87171";
+            statusLine = "<size=11><color=#F87171>MUNICIÃ“N BAJA</color></size>";
+        }
+
+        ammoText.text = $"<b><size=38><color={clipColor}>{currentClip}</color></size></b>" +
+                        $"<size=20><color=#64748B> / </color><color=#CBD5E1>{reserveAmmo}</color></size>\n" +
+                        $"{statusLine}";
     }
 }
