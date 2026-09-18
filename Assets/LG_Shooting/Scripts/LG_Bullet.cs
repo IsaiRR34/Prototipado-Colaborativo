@@ -47,14 +47,19 @@ public class LG_Bullet : MonoBehaviour
         }
 
         // Apply damage if we hit an enemy
-        LG_Enemy enemy = other.GetComponent<LG_Enemy>();
-        if (enemy == null && rb != null)
-        {
-            enemy = rb.GetComponent<LG_Enemy>();
-        }
+        LG_Enemy enemy = other.GetComponentInParent<LG_Enemy>();
         if (enemy != null)
         {
-            enemy.TakeDamage(1f);
+            bool isHead = other.name.ToLower().Contains("head") || other.name.ToLower().Contains("cabeza");
+            enemy.TakeDamage(1f, isHead);
+        }
+
+        // Apply damage to Boss
+        BossBabyController boss = other.GetComponentInParent<BossBabyController>();
+        if (boss != null)
+        {
+            bool isHead = other.name.ToLower().Contains("head") || other.name.ToLower().Contains("cabeza");
+            boss.TakeDamage(1f, isHead);
         }
 
         // Return to pool when hitting another collider
@@ -69,18 +74,20 @@ public class LG_Bullet : MonoBehaviour
             rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
         }
 
-        // Apply damage if we hit an enemy
-        LG_Enemy enemy = collision.gameObject.GetComponent<LG_Enemy>();
-        if (enemy == null && rb != null)
-        {
-            enemy = rb.GetComponent<LG_Enemy>();
-        }
+        LG_Enemy enemy = collision.gameObject.GetComponentInParent<LG_Enemy>();
         if (enemy != null)
         {
-            enemy.TakeDamage(1f);
+            bool isHead = collision.collider.name.ToLower().Contains("head") || collision.collider.name.ToLower().Contains("cabeza");
+            enemy.TakeDamage(1f, isHead);
         }
 
-        // Return to pool when hitting another collider physically
+        BossBabyController boss = collision.gameObject.GetComponentInParent<BossBabyController>();
+        if (boss != null)
+        {
+            bool isHead = collision.collider.name.ToLower().Contains("head") || collision.collider.name.ToLower().Contains("cabeza");
+            boss.TakeDamage(1f, isHead);
+        }
+
         ReturnToPool();
     }
 

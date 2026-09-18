@@ -34,8 +34,8 @@ public class LG_Enemy : MonoBehaviour
     [SerializeField] private float attackCooldown = 1.5f;
     private float nextAttackTime;
 
-    //[Header("Efectos de Audio (SFX)")]
-    //[SerializeField] private AudioClip hurtSound;
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioClip hurtSound;
 
     private Renderer[] childRenderers;
     private Color[] originalColors;
@@ -49,13 +49,14 @@ public class LG_Enemy : MonoBehaviour
     private void Start()
     {
         currentHealth = maxHealth;
+        DoomLevelManager.Instance?.RegisterEnemySpawned();
 
-//#if UNITY_EDITOR
-//        if (hurtSound == null)
-//        {
-//            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Zombie_Hit.wav");
-//        }
-//#endif
+#if UNITY_EDITOR
+        if (hurtSound == null)
+        {
+            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Zombie_Hit.wav");
+        }
+#endif
 
         // Automatically locate Player if none is assigned
         if (target == null)
@@ -177,19 +178,26 @@ public class LG_Enemy : MonoBehaviour
     /// Processes damage taken by the enemy.
     /// </summary>
     /// <param name="damage">Amount of damage to apply.</param>
-    public void TakeDamage(float damage)
+    /// <param name="isHeadshot">Whether the hit landed on head hitbox.</param>
+    public void TakeDamage(float damage, bool isHeadshot = false)
     {
         if (currentHealth <= 0f) return;
 
-        currentHealth -= damage;
-        Debug.Log($"[LG_Enemy] {gameObject.name} hit! Health: {currentHealth}/{maxHealth}", this);
+        float finalDamage = isHeadshot ? damage * 2.5f : damage;
+        currentHealth -= finalDamage;
+
+        if (isHeadshot)
+        {
+            Debug.Log($"[LG_Enemy] ¡HEADSHOT CRÍTICO en {gameObject.name}! Daño: {finalDamage}", this);
+            LG_TooltipManager.Instance?.ShowTooltipTemporary("<color=#EF4444><b>¡HEADSHOT!</b></color>", 1f);
+        }
 
         FlashRed();
 
-        //if (hurtSound != null)
-        //{
-        //    AudioSource.PlayClipAtPoint(hurtSound, transform.position, 0.95f);
-        //}
+        if (hurtSound != null)
+        {
+            AudioSource.PlayClipAtPoint(hurtSound, transform.position, 0.95f);
+        }
 
         if (SoundList.Instance != null)
         {
@@ -230,6 +238,8 @@ public class LG_Enemy : MonoBehaviour
     private void Die()
     {
         Debug.Log($"[LG_Enemy] {gameObject.name} defeated!", this);
+
+        DoomLevelManager.Instance?.RegisterEnemyKilled();
 
         if (dropItemOnDeath)
         {
