@@ -1,75 +1,50 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using TMPro;
-using DG.Tweening;
+using System.Collections;
 
 public class LG_Shoot : MonoBehaviour
 {
     [Header("Referencias de Disparo")]
     [SerializeField] private LG_ObjectPool bulletPool;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private Camera playerCamera;
-    [SerializeField] private Transform weaponTransform;
 
-    [Header("Configuración de Arma (Estilo DOOM - Munición Directa)")]
-    [SerializeField] private float fireRate = 0.22f;
-
-    [Header("Apuntado Dinámico (ADS)")]
-    [SerializeField] private bool enableADS = true;
-    [SerializeField] private float adsFov = 45f;
-    [SerializeField] private float defaultFov = 65f;
-    [SerializeField] private float adsSpeed = 10f;
-    [SerializeField] private Vector3 hipPos = new Vector3(0.28f, -0.25f, 0.45f);
-    [SerializeField] private Vector3 adsPos = new Vector3(0f, -0.18f, 0.38f);
-    private bool isAiming = false;
-
-    [Header("Retroceso y Game Feel (Recoil & Shake)")]
-    [SerializeField] private float recoilVerticalKick = 1.8f;
-    [SerializeField] private float recoilHorizontalKick = 0.4f;
-    [SerializeField] private float recoilRecoverySpeed = 8f;
-    [SerializeField] private float screenShakeStrength = 0.12f;
-    private float currentRecoilX = 0f;
-    private float currentRecoilY = 0f;
+    [Header("Configuración de Arma")]
+    [SerializeField] private float fireRate = 0.2f;
+    private float fireRateTimer = 0f;
+    private bool canShoot = true;
+    private bool isReloading = false;
 
     [Header("Sistema de Munición")]
     [SerializeField] private LG_Inventory playerInventory;
     [SerializeField] private string ammoItemName = "Munición";
 
+    public int maxClipSize = 12;
+    public int currentClip;
+
     [Header("UI HUD")]
     [SerializeField] private TextMeshProUGUI ammoText;
-    [SerializeField] private GameObject crosshairUI;
 
-    [Header("Efectos de Audio (SFX)")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip shootSound;
-    [SerializeField] private AudioClip reloadSound;
-    [SerializeField] private AudioClip emptySound;
-
-    [Header("Efectos")]
-    [SerializeField] private Light muzzleFlashLight;
+    //[Header("Efectos de Audio (SFX)")]
+    //[SerializeField] private AudioSource audioSource;
+    //[SerializeField] private AudioClip shootSound;
+    //[SerializeField] private AudioClip reloadSound;
+    //[SerializeField] private AudioClip emptySound;
 
     [Header("Inputs")]
     [SerializeField] private InputActionReference shootAction;
     private InputAction shootActionInstance;
 
-    private float fireRateTimer = 0f;
-    private bool canShoot = true;
-
     private void Awake()
     {
-        if (playerCamera == null) playerCamera = Camera.main;
-        if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>();
-
-        if (playerCamera != null)
-        {
-            defaultFov = playerCamera.fieldOfView;
-        }
+        currentClip = maxClipSize;
 
         var playerInput = GetComponentInParent<PlayerInput>();
         if (playerInput != null && playerInput.actions != null)
         {
             shootActionInstance = playerInput.actions.FindAction("Shoot");
         }
+
         if (shootActionInstance == null && shootAction != null)
         {
             shootActionInstance = shootAction.action;
@@ -78,19 +53,19 @@ public class LG_Shoot : MonoBehaviour
 
     private void Start()
     {
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSource.spatialBlend = 0f; // Audio 2D estéreo local
-        }
+        //if (audioSource == null)
+        //{
+        //    audioSource = GetComponent<AudioSource>();
+        //    if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        //    audioSource.playOnAwake = false;
+        //    audioSource.spatialBlend = 0f; // Audio 2D estéreo para el jugador
+        //}
 
-#if UNITY_EDITOR
-        if (shootSound == null) shootSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Shoot.wav");
-        if (reloadSound == null) reloadSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Reload.wav");
-        if (emptySound == null) emptySound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Empty.wav");
-#endif
+//#if UNITY_EDITOR
+//        if (shootSound == null) shootSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Shoot.wav");
+//        if (reloadSound == null) reloadSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Reload.wav");
+//        if (emptySound == null) emptySound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Empty.wav");
+//#endif
 
         if (playerInventory == null)
         {
@@ -98,20 +73,49 @@ public class LG_Shoot : MonoBehaviour
             if (playerInventory == null) playerInventory = Object.FindFirstObjectByType<LG_Inventory>();
         }
 
-        if (crosshairUI == null)
-        {
-            var crossGO = GameObject.Find("Crosshair");
-            if (crossGO != null) crosshairUI = crossGO;
-        }
-
         if (ammoText == null)
         {
+            // Priorizar el cuadro de municion en la esquina inferior derecha
             GameObject container = GameObject.Find("MunicionContainer");
-            if (container != null) ammoText = container.GetComponentInChildren<TextMeshProUGUI>();
+            if (container != null)
+            {
+                ammoText = container.GetComponentInChildren<TextMeshProUGUI>();
+            }
+
             if (ammoText == null)
             {
                 GameObject panel = GameObject.Find("MunicionPannel");
-                if (panel != null) ammoText = panel.GetComponentInChildren<TextMeshProUGUI>();
+                if (panel != null)
+                {
+                    ammoText = panel.GetComponentInChildren<TextMeshProUGUI>();
+                }
+            }
+
+            if (ammoText == null)
+            {
+                GameObject ammoGo = GameObject.Find("MunicionText");
+                if (ammoGo == null) ammoGo = GameObject.Find("AmmoText");
+                if (ammoGo != null)
+                {
+                    ammoText = ammoGo.GetComponent<TextMeshProUGUI>();
+                }
+            }
+        }
+
+        // Limpiar cualquier texto de municion suelto en la esquina superior del Canvas
+        if (ammoText != null)
+        {
+            var canvas = Object.FindFirstObjectByType<Canvas>();
+            if (canvas != null)
+            {
+                for (int i = canvas.transform.childCount - 1; i >= 0; i--)
+                {
+                    Transform child = canvas.transform.GetChild(i);
+                    if ((child.name == "MunicionText" || child.name == "AmmoText") && child != ammoText.transform && child != ammoText.transform.parent)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                }
             }
         }
 
@@ -143,9 +147,13 @@ public class LG_Shoot : MonoBehaviour
             if (parent != null && (parent.name == "MunicionPannel" || parent.name == "MunicionContainer"))
             {
                 if (parent.parent != null && parent.parent.name == "MunicionContainer")
+                {
                     parent.parent.gameObject.SetActive(enable);
+                }
                 else
+                {
                     parent.gameObject.SetActive(enable);
+                }
             }
             else
             {
@@ -158,95 +166,42 @@ public class LG_Shoot : MonoBehaviour
     {
         fireRateTimer -= Time.deltaTime;
 
-        HandleADS();
-        HandleRecoilRecovery();
+        if (!canShoot || isReloading) return;
 
-        if (!canShoot) return;
+        int reserveAmmo = GetTotalReserveAmmo();
+
+        // Recarga con tecla R
+        if (Input.GetKeyDown(KeyCode.R) && currentClip < maxClipSize && reserveAmmo > 0)
+        {
+            StartCoroutine(ReloadRoutine());
+            return;
+        }
 
         bool wantsToShoot = (shootActionInstance != null && shootActionInstance.IsPressed()) || Input.GetMouseButton(0);
 
         if (wantsToShoot && fireRateTimer <= 0f)
         {
-            TryShootDirect();
-        }
-    }
-
-    private void HandleADS()
-    {
-        if (!enableADS) return;
-
-        isAiming = Input.GetMouseButton(1);
-
-        if (playerCamera != null)
-        {
-            float targetFov = isAiming ? adsFov : defaultFov;
-            playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFov, Time.deltaTime * adsSpeed);
-        }
-
-        if (weaponTransform != null)
-        {
-            Vector3 targetPos = isAiming ? adsPos : hipPos;
-            weaponTransform.localPosition = Vector3.Lerp(weaponTransform.localPosition, targetPos, Time.deltaTime * adsSpeed);
-        }
-
-        if (crosshairUI != null)
-        {
-            crosshairUI.SetActive(!isAiming);
-        }
-    }
-
-    private void HandleRecoilRecovery()
-    {
-        if (Mathf.Abs(currentRecoilX) > 0.001f || Mathf.Abs(currentRecoilY) > 0.001f)
-        {
-            currentRecoilX = Mathf.Lerp(currentRecoilX, 0f, Time.deltaTime * recoilRecoverySpeed);
-            currentRecoilY = Mathf.Lerp(currentRecoilY, 0f, Time.deltaTime * recoilRecoverySpeed);
-        }
-    }
-
-    private void TryShootDirect()
-    {
-        int availableAmmo = playerInventory != null ? playerInventory.GetTotalAmmoCount() : 0;
-
-        if (availableAmmo > 0)
-        {
-            if (playerInventory != null)
+            if (currentClip > 0)
             {
-                playerInventory.ConsumeAmmo(1);
+                ShootBullet();
+                fireRateTimer = fireRate;
             }
-
-            ShootBullet();
-            fireRateTimer = fireRate;
-        }
-        else
-        {
-            // Gatillazo seco (Dry Fire) con audio directo original
-            PlayAudio(emptySound, 0.8f);
-            if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Empty");
-
-            fireRateTimer = fireRate * 1.5f;
-            UpdateAmmoUI();
+            else
+            {
+                // Sonido de gatillo sin balas (Dry Fire)
+                //PlayAudio(emptySound, 0.7f);
+                SoundList.Instance.PlaySound("SFX_Empty");
+                fireRateTimer = fireRate * 1.5f;
+            }
         }
     }
 
     private void ShootBullet()
     {
+        currentClip--;
         UpdateAmmoUI();
-
-        // Audio directo original
-        PlayAudio(shootSound, 1.0f);
-        if (SoundList.Instance != null)
-        {
-            SoundList.Instance.PlaySoundRandomPitch("SFX_Shoot", 0.94f, 1.06f);
-        }
-
-        ApplyRecoilAndShake();
-
-        if (muzzleFlashLight != null)
-        {
-            muzzleFlashLight.enabled = true;
-            DOVirtual.DelayedCall(0.04f, () => { if (muzzleFlashLight != null) muzzleFlashLight.enabled = false; });
-        }
+        //PlayAudio(shootSound, 1.0f);
+        SoundList.Instance.PlaySoundRandomPitch("SFX_Shoot", 0.95f, 1.05f);
 
         if (bulletPool == null)
         {
@@ -265,33 +220,31 @@ public class LG_Shoot : MonoBehaviour
         }
     }
 
-    private void ApplyRecoilAndShake()
+    private IEnumerator ReloadRoutine()
     {
-        if (playerCamera != null)
-        {
-            playerCamera.transform.DOComplete();
-            playerCamera.transform.DOShakePosition(0.08f, screenShakeStrength, 14, 90, false, true);
+        isReloading = true;
+        UpdateAmmoUI();
+        //PlayAudio(reloadSound, 0.9f);
+        SoundList.Instance.PlaySound("SFX_Reload");
 
-            float kickX = -recoilVerticalKick;
-            float kickY = Random.Range(-recoilHorizontalKick, recoilHorizontalKick);
-            playerCamera.transform.DOLocalRotate(new Vector3(kickX, kickY, 0f), 0.04f)
-                .OnComplete(() => playerCamera.transform.DOLocalRotate(Vector3.zero, 0.12f));
+        yield return new WaitForSeconds(1.5f);
+
+        int ammoNeeded = maxClipSize - currentClip;
+        int reserveAmmo = GetTotalReserveAmmo();
+
+        int ammoToReload = Mathf.Min(ammoNeeded, reserveAmmo);
+
+        if (ammoToReload > 0 && playerInventory != null)
+        {
+            playerInventory.RemoveItem(ammoItemName, ammoToReload);
+            currentClip += ammoToReload;
         }
+
+        isReloading = false;
+        UpdateAmmoUI();
     }
 
-    public void PlayAudio(AudioClip clip, float volume = 1.0f)
-    {
-        if (clip == null) return;
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 0f;
-        }
-        audioSource.PlayOneShot(clip, volume);
-    }
-
-    public void AddAmmo(int amount)
+    public void AddMunicion(int amount)
     {
         if (playerInventory != null)
         {
@@ -299,16 +252,58 @@ public class LG_Shoot : MonoBehaviour
         }
     }
 
+    public void AddAmmo(int amount)
+    {
+        AddMunicion(amount);
+    }
+
+    private int GetTotalReserveAmmo()
+    {
+        if (playerInventory == null) return 0;
+        return playerInventory.GetItemCount(ammoItemName);
+    }
+
     private void UpdateAmmoUI()
     {
         if (ammoText == null) return;
 
-        int totalAmmo = playerInventory != null ? playerInventory.GetTotalAmmoCount() : 0;
+        if (isReloading)
+        {
+            ammoText.text = "<b><size=22><color=#FBBF24>RECARGANDO...</color></size></b>\n<size=11><color=#94A3B8>PISTOLA 9MM</color></size>";
+            return;
+        }
 
-        string ammoColor = totalAmmo > 10 ? "#38BDF8" : (totalAmmo > 0 ? "#FBBF24" : "#EF4444");
-        string statusText = totalAmmo > 0 ? "MUNICIÓN LISTA (DIRECTA)" : "SIN MUNICIÓN";
+        int reserveAmmo = GetTotalReserveAmmo();
 
-        ammoText.text = $"<b><size=36><color={ammoColor}>{totalAmmo}</color></size></b> <size=16><color=#94A3B8>BALAS</color></size>\n" +
-                        $"<size=11><color={ammoColor}><b>{statusText}</b></color></size>";
+        string clipColor = "#FFFFFF";
+        string statusLine = "<size=11><color=#38BDF8><b>PISTOLA 9MM</b></color></size>";
+
+        if (currentClip == 0)
+        {
+            clipColor = "#EF4444";
+            statusLine = reserveAmmo > 0 
+                ? "<size=12><color=#FBBF24><b>[ R ] RECARGAR</b></color></size>" 
+                : "<size=11><color=#EF4444><b>SIN MUNICIÓN</b></color></size>";
+        }
+        else if (currentClip <= 3)
+        {
+            clipColor = "#F87171";
+            statusLine = "<size=11><color=#F87171>MUNICIÓN BAJA</color></size>";
+        }
+
+        ammoText.text = $"<b><size=38><color={clipColor}>{currentClip}</color></size></b>" +
+                        $"<size=20><color=#64748B> / </color><color=#CBD5E1>{reserveAmmo}</color></size>\n" +
+                        $"{statusLine}";
     }
+
+    //private void PlayAudio(AudioClip clip, float volume = 1.0f)
+    //{
+    //    if (clip == null) return;
+    //    if (audioSource == null)
+    //    {
+    //        audioSource = GetComponent<AudioSource>();
+    //        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+    //    }
+    //    audioSource.PlayOneShot(clip, volume);
+    //}
 }
