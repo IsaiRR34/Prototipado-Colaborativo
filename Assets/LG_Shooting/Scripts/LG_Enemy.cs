@@ -34,8 +34,8 @@ public class LG_Enemy : MonoBehaviour
     [SerializeField] private float attackCooldown = 1.5f;
     private float nextAttackTime;
 
-    [Header("Efectos de Audio (SFX)")]
-    [SerializeField] private AudioClip hurtSound;
+    //[Header("Efectos de Audio (SFX)")]
+    //[SerializeField] private AudioClip hurtSound;
 
     private Renderer[] childRenderers;
     private Color[] originalColors;
@@ -50,12 +50,12 @@ public class LG_Enemy : MonoBehaviour
     {
         currentHealth = maxHealth;
 
-#if UNITY_EDITOR
-        if (hurtSound == null)
-        {
-            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Zombie_Hit.wav");
-        }
-#endif
+//#if UNITY_EDITOR
+//        if (hurtSound == null)
+//        {
+//            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Zombie_Hit.wav");
+//        }
+//#endif
 
         // Automatically locate Player if none is assigned
         if (target == null)
@@ -186,9 +186,14 @@ public class LG_Enemy : MonoBehaviour
 
         FlashRed();
 
-        if (hurtSound != null)
+        //if (hurtSound != null)
+        //{
+        //    AudioSource.PlayClipAtPoint(hurtSound, transform.position, 0.95f);
+        //}
+
+        if (SoundList.Instance != null)
         {
-            AudioSource.PlayClipAtPoint(hurtSound, transform.position, 0.95f);
+            SoundList.Instance.PlaySoundAtPosition("SFX_Zombie_Hit", transform.position);
         }
 
         if (currentHealth <= 0f)
@@ -287,6 +292,11 @@ public class LG_Enemy : MonoBehaviour
         if (useProceduralWalk && leftArm != null && rightArm != null)
         {
             StartCoroutine(PerformProceduralAttackThrust());
+        }
+
+        if (SoundList.Instance != null)
+        {
+            SoundList.Instance.PlaySoundAtPosition("SFX_Zombie_Attack", transform.position);
         }
     }
 

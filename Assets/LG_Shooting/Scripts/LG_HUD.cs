@@ -19,17 +19,17 @@ public class LG_HUD : MonoBehaviour
         // Try finding components automatically if not assigned in Inspector
         if (playerMovement == null)
         {
-            playerMovement = FindObjectOfType<RIMovement>();
+            playerMovement = Object.FindFirstObjectByType<RIMovement>();
         }
 
         if (playerInventory == null)
         {
-            playerInventory = FindObjectOfType<LG_Inventory>();
+            playerInventory = Object.FindFirstObjectByType<LG_Inventory>();
         }
 
         if (playerHealth == null)
         {
-            playerHealth = FindObjectOfType<LG_PlayerHealth>();
+            playerHealth = Object.FindFirstObjectByType<LG_PlayerHealth>();
         }
 
         // Subscribe to inventory update events

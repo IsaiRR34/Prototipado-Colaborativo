@@ -90,7 +90,7 @@ public class PrototypeSetupWindow : EditorWindow
         AudioClip sfxUnlock = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/SFX_Door_Unlock.wav");
 
         // Asegurar Luz Direccional para apreciar las texturas
-        Light dirLight = FindObjectOfType<Light>();
+        Light dirLight = Object.FindFirstObjectByType<Light>();
         if (dirLight == null)
         {
             GameObject lightGO = new GameObject("Directional Light");

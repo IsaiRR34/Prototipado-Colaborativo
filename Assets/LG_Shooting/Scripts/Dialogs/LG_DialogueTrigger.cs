@@ -11,21 +11,39 @@ public class LG_DialogueTrigger : MonoBehaviour
 
     private void Update()
     {
+        // 1. Validación de seguridad (Failsafe) por si el jugador respawnea/teletransporta
+        if (playerInRange && playerRootRef != null)
+        {
+            if (Vector3.Distance(transform.position, playerRootRef.transform.position) > 5f)
+            {
+                playerInRange = false;
+                playerRootRef = null;
+                if (LG_TooltipManager.Instance != null) LG_TooltipManager.Instance.HideTooltip();
+                return;
+            }
+        }
+
+        // 2. Comportamiento normal de interacción
         if (playerInRange && !LG_DialogueManager.IsDialogueActive && Input.GetKeyDown(KeyCode.E))
         {
-            // Le pasamos todo el objeto raíz del jugador al Manager para que lo paralice correctamente
+            // Ocultar Tooltip porque ya inició el diálogo
+            if (LG_TooltipManager.Instance != null) LG_TooltipManager.Instance.HideTooltip();
+
             LG_DialogueManager.Instance.StartDialogue(dialogueLines, playerRootRef);
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Revisamos si es el jugador el que entró al Trigger
         if (other.CompareTag("Player") || other.GetComponentInParent<LG_PlayerHealth>() != null)
         {
             playerInRange = true;
-            // Guardamos el padre principal del jugador para pasárselo al manager
             playerRootRef = other.transform.root.gameObject;
+
+            if (LG_TooltipManager.Instance != null)
+            {
+                LG_TooltipManager.Instance.ShowTooltip("E - Terminal");
+            }
         }
     }
 
@@ -35,6 +53,11 @@ public class LG_DialogueTrigger : MonoBehaviour
         {
             playerInRange = false;
             playerRootRef = null;
+
+            if (LG_TooltipManager.Instance != null)
+            {
+                LG_TooltipManager.Instance.HideTooltip();
+            }
         }
     }
 }
