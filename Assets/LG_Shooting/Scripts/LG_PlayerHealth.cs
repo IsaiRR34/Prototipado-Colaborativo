@@ -7,37 +7,33 @@ public class LG_PlayerHealth : MonoBehaviour
     [SerializeField] private float maxHealth = 100f;
     private float currentHealth;
 
+    [Header("Efectos de Audio (SFX)")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip hurtSound;
+
     public event Action OnHealthChanged;
     public event Action OnPlayerDeath;
-
-    //[Header("Efectos de Audio (SFX)")]
-    //[SerializeField] private AudioSource audioSource;
-    //[SerializeField] private AudioClip hurtSound;
 
     private void Start()
     {
         currentHealth = maxHealth;
 
-        //if (audioSource == null)
-        //{
-        //    audioSource = GetComponent<AudioSource>();
-        //    if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-        //    audioSource.playOnAwake = false;
-        //    audioSource.spatialBlend = 0f; // 2D estéreo local
-        //}
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f;
+        }
 
-//#if UNITY_EDITOR
-//        if (hurtSound == null)
-//        {
-//            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Player_Hurt.wav");
-//        }
-//#endif
+#if UNITY_EDITOR
+        if (hurtSound == null)
+        {
+            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Player_Hurt.wav");
+        }
+#endif
     }
 
-    /// <summary>
-    /// Deducts health and checks for death.
-    /// </summary>
-    /// <param name="damage">Amount of damage to receive.</param>
     public void TakeDamage(float damage)
     {
         if (currentHealth <= 0f) return;
@@ -46,10 +42,11 @@ public class LG_PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
         Debug.Log($"[LG_PlayerHealth] Player took {damage} damage! Current health: {currentHealth}/{maxHealth}", this);
 
-        //if (audioSource != null && hurtSound != null)
-        //{
-        //    audioSource.PlayOneShot(hurtSound, 1.0f);
-        //}
+        // Sonido directo original
+        if (audioSource != null && hurtSound != null)
+        {
+            audioSource.PlayOneShot(hurtSound, 1.0f);
+        }
 
         if (SoundList.Instance != null)
         {
@@ -64,10 +61,6 @@ public class LG_PlayerHealth : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Restores health up to max health.
-    /// </summary>
-    /// <param name="amount">Amount of health to restore.</param>
     public void Heal(float amount)
     {
         if (currentHealth <= 0f) return;
@@ -77,9 +70,6 @@ public class LG_PlayerHealth : MonoBehaviour
         OnHealthChanged?.Invoke();
     }
 
-    /// <summary>
-    /// Returns normalized health (0 to 1) for UI sliders.
-    /// </summary>
     public float GetHealthNormalized()
     {
         return currentHealth / maxHealth;
@@ -93,22 +83,23 @@ public class LG_PlayerHealth : MonoBehaviour
         Debug.Log("[LG_PlayerHealth] Player has died!", this);
         OnPlayerDeath?.Invoke();
 
-        // Respawn sequence (returns to starting position and refills health)
+        // Secuencia de reaparición desde el punto de control de Sala Segura
         currentHealth = maxHealth;
         OnHealthChanged?.Invoke();
         
-        transform.position = new Vector3(0f, 1f, 0f);
+        Vector3 respawnPos = SafeRoomCheckpoint.LastSafePosition;
+
+        CharacterController cc = GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
         
-        // Reset rotation
+        transform.position = respawnPos;
         transform.rotation = Quaternion.identity;
 
-        // If there's a CharacterController, we should temporarily disable it to avoid teleport physics conflicts
-        CharacterController cc = GetComponent<CharacterController>();
-        if (cc != null)
+        if (cc != null) cc.enabled = true;
+
+        if (LG_TooltipManager.Instance != null)
         {
-            cc.enabled = false;
-            transform.position = new Vector3(0f, 1f, 0f);
-            cc.enabled = true;
+            LG_TooltipManager.Instance.ShowTooltipTemporary("Reapareciendo en Sala Segura...", 2f);
         }
     }
 }

@@ -25,9 +25,14 @@ public class PrototypeSetupWindow : EditorWindow
                       "- Zombis 3D animados y torre fisica interactiva.\n\n" +
                       "Asegurate de guardar la escena antes de proceder.", EditorStyles.wordWrappedLabel);
         
-        GUILayout.Space(20);
+        if (GUILayout.Button("Generar Secuencia Completa Estilo DOOM (3 Sectores + Jefe)", GUILayout.Height(45)))
+        {
+            DoomLevelGenerator.GenerarSecuenciaDoom();
+        }
 
-        if (GUILayout.Button("Generar Prototipo Completo", GUILayout.Height(40)))
+        GUILayout.Space(10);
+
+        if (GUILayout.Button("Generar Prototipo Arena Básica", GUILayout.Height(30)))
         {
             GenerarPrototipo();
         }
