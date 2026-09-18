@@ -24,6 +24,14 @@ public class SoundList : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
+
     private void InitializeSounds()
     {
         soundDictionary.Clear();
@@ -62,7 +70,7 @@ public class SoundList : MonoBehaviour
     {
         if (soundDictionary.TryGetValue(audioName, out Sound sound))
         {
-            // Instanciar un emisor temporal en la posición para sonido 3D posicional en el mundo
+            // Instanciar un emisor temporal en la posiciÃ³n para sonido 3D posicional en el mundo
             GameObject tempGO = new GameObject($"SFX_{audioName}");
             tempGO.transform.position = position;
 
@@ -121,6 +129,6 @@ public class Sound
         source.outputAudioMixerGroup = mixer;
         source.loop = loop;
         source.playOnAwake = false;
-        source.spatialBlend = 0f; // 2D estéreo base
+        source.spatialBlend = 0f; // 2D estÃ©reo base
     }
 }

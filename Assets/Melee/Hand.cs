@@ -21,7 +21,6 @@ public class Hand : MonoBehaviour
     //[SerializeField] private AudioClip hitSound;
 
     private bool canHit;
-    private bool canLight;
     private float nextAttackTime = 0f;
     private bool isSwinging = false;
     private Quaternion swordOriginalRot;
@@ -91,7 +90,6 @@ public class Hand : MonoBehaviour
     {
         CancelSwing();
         canHit = false;
-        canLight = false;
 
         if (sword != null) sword.SetActive(false);
         if (flashLight != null) flashLight.SetActive(false);
@@ -104,7 +102,6 @@ public class Hand : MonoBehaviour
     {
         CancelSwing();
         canHit = false;
-        canLight = true;
 
         if (flashLight != null) flashLight.SetActive(true);
         if (gun != null) gun.SetActive(false);
@@ -116,7 +113,6 @@ public class Hand : MonoBehaviour
     void GetSword()
     {
         canHit = true;
-        canLight = false;
 
         if (sword != null) sword.SetActive(true);
         if (gun != null) gun.SetActive(false);
