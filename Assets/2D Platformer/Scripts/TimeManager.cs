@@ -7,7 +7,7 @@ public class TimeManager : MonoBehaviour
 {
     public static TimeManager Instance { get; private set; }
 
-    [Header("ConfiguraciÛn de Tecla")]
+    [Header("Configuraci√≥n de Tecla")]
     [SerializeField] private KeyCode pauseKey = KeyCode.Escape;
 
     [Header("UI Referencias")]
@@ -18,7 +18,7 @@ public class TimeManager : MonoBehaviour
     private Tween pauseTween;
     private Coroutine freezeFrameRoutine;
 
-    // Referencia al Player para congelar controles de c·mara/movimiento
+    // Referencia al Player para congelar controles de c√°mara/movimiento
     private GameObject playerRef;
 
     private void Awake()
@@ -27,8 +27,26 @@ public class TimeManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     private void Start()
     {
+        if (pauseScreen == null)
+        {
+            CanvasGroup[] groups = Object.FindObjectsByType<CanvasGroup>(FindObjectsSortMode.None);
+            foreach (var cg in groups)
+            {
+                if (cg.gameObject.name.ToLower().Contains("pause"))
+                {
+                    pauseScreen = cg;
+                    break;
+                }
+            }
+        }
+
         if (pauseScreen != null)
         {
             pauseScreen.alpha = 0f;
@@ -45,7 +63,7 @@ public class TimeManager : MonoBehaviour
 
     private void Update()
     {
-        // No abrir pausa si un di·logo est· activo en pantalla
+        // No abrir pausa si un di√°logo est√° activo en pantalla
         if (LG_DialogueManager.IsDialogueActive) return;
 
         if (Input.GetKeyDown(pauseKey))
@@ -106,7 +124,7 @@ public class TimeManager : MonoBehaviour
             if (pShoot != null) pShoot.enabled = !lockInput;
         }
 
-        // Manejo del cursor para navegar por el men˙ de pausa
+        // Manejo del cursor para navegar por el men√∫ de pausa
         if (lockInput)
         {
             Cursor.lockState = CursorLockMode.None;

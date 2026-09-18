@@ -17,8 +17,22 @@ public class LG_TooltipManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     private void Start()
     {
+        if (tooltipText == null)
+        {
+            tooltipText = GetComponentInChildren<TextMeshProUGUI>(true);
+            if (tooltipText == null)
+            {
+                GameObject tGo = GameObject.Find("TooltipText");
+                if (tGo != null) tooltipText = tGo.GetComponent<TextMeshProUGUI>();
+            }
+        }
         HideTooltip();
     }
 
@@ -49,7 +63,7 @@ public class LG_TooltipManager : MonoBehaviour
         }
     }
 
-    // Para los Pickups (Se oculta solo después de un tiempo)
+    // Para los Pickups (Se oculta solo despuÃ©s de un tiempo)
     public void ShowTooltipTemporary(string message, float duration)
     {
         if (tempTooltipCoroutine != null) StopCoroutine(tempTooltipCoroutine);

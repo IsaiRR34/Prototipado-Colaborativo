@@ -15,7 +15,6 @@ public class LG_Collectible : MonoBehaviour
     [SerializeField] private float bobAmplitude = 0.15f;
 
     private Vector3 startPos;
-    private bool isPlayerInRange = false;
 
     private void Start()
     {

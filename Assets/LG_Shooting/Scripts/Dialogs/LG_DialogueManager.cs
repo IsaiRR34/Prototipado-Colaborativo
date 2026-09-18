@@ -29,7 +29,7 @@ public class LG_DialogueManager : MonoBehaviour
 
     private void Awake()
     {
-        // Patrón Singleton a prueba de recarga de escenas
+        // PatrÃ³n Singleton a prueba de recarga de escenas
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -43,6 +43,31 @@ public class LG_DialogueManager : MonoBehaviour
 
     private void Start()
     {
+        if (dialoguePanel == null)
+        {
+            GameObject p = GameObject.Find("DialoguePanel");
+            if (p != null)
+            {
+                dialoguePanel = p;
+                if (dialogueText == null) dialogueText = p.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (optionsContainer == null)
+                {
+                    Transform opt = p.transform.Find("OptionsContainer");
+                    if (opt != null) optionsContainer = opt.gameObject;
+                }
+                if (truthButton == null && optionsContainer != null)
+                {
+                    Transform tb = optionsContainer.transform.Find("TruthButton");
+                    if (tb != null) truthButton = tb.GetComponent<Button>();
+                }
+                if (lieButton == null && optionsContainer != null)
+                {
+                    Transform lb = optionsContainer.transform.Find("LieButton");
+                    if (lb != null) lieButton = lb.GetComponent<Button>();
+                }
+            }
+        }
+
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         if (optionsContainer != null) optionsContainer.SetActive(false);
 
@@ -61,7 +86,7 @@ public class LG_DialogueManager : MonoBehaviour
 
     private void Update()
     {
-        // Añadida protección contra nulos para evitar el MissingReferenceException
+        // AÃ±adida protecciÃ³n contra nulos para evitar el MissingReferenceException
         if (!IsDialogueActive || optionsContainer == null || dialogueText == null) return;
 
         if (!optionsContainer.activeSelf && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(0)))
