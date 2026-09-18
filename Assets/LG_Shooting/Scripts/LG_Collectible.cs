@@ -3,31 +3,22 @@ using UnityEngine;
 public class LG_Collectible : MonoBehaviour
 {
     [Header("Collectible Settings")]
-    [Tooltip("Nombre del ítem a añadir al inventario.")]
-    [SerializeField] private string itemName = "Munición";
+    [Tooltip("Name of the item to add to the inventory.")]
+    [SerializeField] private string itemName = "Ammo";
 
-    [Tooltip("Cantidad del ítem a añadir.")]
+    [Tooltip("Quantity of the item to add.")]
     [SerializeField] private int amount = 5;
 
     [Header("Movement Animation")]
-    [Tooltip("Velocidad de rotación.")]
     [SerializeField] private float rotationSpeed = 50f;
-
-    [Tooltip("Frecuencia de oscilación vertical.")]
     [SerializeField] private float bobFrequency = 2f;
-
-    [Tooltip("Amplitud de oscilación vertical.")]
     [SerializeField] private float bobAmplitude = 0.15f;
 
-    [Header("Efectos de Audio (SFX)")]
-    [SerializeField] private AudioClip pickupSound;
-
     private Vector3 startPos;
+    private bool isPlayerInRange = false;
 
     private void Start()
     {
-        AutoAssignSoundIfMissing();
-
         startPos = transform.position;
 
         Collider col = GetComponent<Collider>();
@@ -52,14 +43,30 @@ public class LG_Collectible : MonoBehaviour
 
         if (inventory != null)
         {
-            if (pickupSound != null)
+            // Mostrar Tooltip temporal que dura 1.5 segundos
+            if (LG_TooltipManager.Instance != null)
             {
-                AudioSource.PlayClipAtPoint(pickupSound, transform.position, 1.0f);
+                LG_TooltipManager.Instance.ShowTooltipTemporary($"Pickup {itemName}", 1.5f);
+            }
+
+            // Reproducción de sonido
+            if (SoundList.Instance != null)
+            {
+                string clean = (itemName != null) ? itemName.ToLower() : "";
+                if (clean.Contains("muni") || clean.Contains("ammo"))
+                    SoundList.Instance.PlaySound("SFX_Pickup_Ammo");
+                else if (clean.Contains("bater") || clean.Contains("battery"))
+                    SoundList.Instance.PlaySound("SFX_Pickup_Battery");
+                else if (clean.Contains("llave") || clean.Contains("key"))
+                    SoundList.Instance.PlaySound("SFX_Pickup_Key");
+                else
+                    SoundList.Instance.PlaySound("SFX_Pickup");
             }
 
             inventory.AddItem(itemName, amount);
-            Debug.Log($"[LG_Collectible] ¡Jugador recogió {amount}x {itemName}!");
-            Destroy(gameObject);
+            Debug.Log($"[LG_Collectible] Player picked up {amount}x {itemName}!");
+
+            Destroy(gameObject); // El texto se quedará en pantalla gracias a la Corrutina
         }
     }
 
@@ -67,39 +74,5 @@ public class LG_Collectible : MonoBehaviour
     {
         itemName = name;
         amount = qty;
-        AutoAssignSoundIfMissing();
-    }
-
-    public void SetPickupSound(AudioClip clip)
-    {
-        pickupSound = clip;
-    }
-
-    private void AutoAssignSoundIfMissing()
-    {
-#if UNITY_EDITOR
-        if (pickupSound == null)
-        {
-            string clean = (itemName != null) ? itemName.ToLower() : "";
-            string dir = "Assets/LG_Shooting/LGAssets/Audio";
-            if (clean.Contains("muni"))
-            {
-                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup_Ammo.wav");
-            }
-            else if (clean.Contains("bater") || clean.Contains("battery"))
-            {
-                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup_Battery.wav");
-            }
-            else if (clean.Contains("llave") || clean.Contains("key"))
-            {
-                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup_Key.wav");
-            }
-
-            if (pickupSound == null)
-            {
-                pickupSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"{dir}/SFX_Pickup.wav");
-            }
-        }
-#endif
     }
 }

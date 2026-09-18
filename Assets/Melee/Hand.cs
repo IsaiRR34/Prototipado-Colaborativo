@@ -15,10 +15,10 @@ public class Hand : MonoBehaviour
     [SerializeField] private float attackRate = 0.45f;
     [SerializeField] private float hitForce = 12f;
 
-    [Header("Efectos de Audio (SFX)")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip swingSound;
-    [SerializeField] private AudioClip hitSound;
+    //[Header("Efectos de Audio (SFX)")]
+    //[SerializeField] private AudioSource audioSource;
+    //[SerializeField] private AudioClip swingSound;
+    //[SerializeField] private AudioClip hitSound;
 
     private bool canHit;
     private bool canLight;
@@ -30,17 +30,17 @@ public class Hand : MonoBehaviour
 
     void Start()
     {
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-        }
+//        if (audioSource == null)
+//        {
+//            audioSource = GetComponent<AudioSource>();
+//            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+//            audioSource.playOnAwake = false;
+//        }
 
-#if UNITY_EDITOR
-        if (swingSound == null) swingSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Melee_Swing.wav");
-        if (hitSound == null) hitSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Melee_Hit.wav");
-#endif
+//#if UNITY_EDITOR
+//        if (swingSound == null) swingSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Melee_Swing.wav");
+//        if (hitSound == null) hitSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Melee_Hit.wav");
+//#endif
 
         if (shootScript == null)
         {
@@ -143,9 +143,14 @@ public class Hand : MonoBehaviour
     {
         isSwinging = true;
 
-        if (audioSource != null && swingSound != null)
+        //if (audioSource != null && swingSound != null)
+        //{
+        //    audioSource.PlayOneShot(swingSound, 0.85f);
+        //}
+
+        if (SoundList.Instance != null)
         {
-            audioSource.PlayOneShot(swingSound, 0.85f);
+            SoundList.Instance.PlaySound("SFX_Melee_Swing");
         }
 
         if (playerCamera == null) playerCamera = Camera.main;
@@ -199,9 +204,14 @@ public class Hand : MonoBehaviour
         // SphereCast para tener un area de impacto generosa y satisfactoria
         if (Physics.SphereCast(origin, 0.4f, direction, out hit, attackRange))
         {
-            if (audioSource != null && hitSound != null)
+            //if (audioSource != null && hitSound != null)
+            //{
+            //    audioSource.PlayOneShot(hitSound, 0.95f);
+            //}
+
+            if (SoundList.Instance != null)
             {
-                audioSource.PlayOneShot(hitSound, 0.95f);
+                SoundList.Instance.PlaySound("SFX_Melee_Hit");
             }
 
             // Daño al enemigo

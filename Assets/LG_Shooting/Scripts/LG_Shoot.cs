@@ -25,11 +25,11 @@ public class LG_Shoot : MonoBehaviour
     [Header("UI HUD")]
     [SerializeField] private TextMeshProUGUI ammoText;
 
-    [Header("Efectos de Audio (SFX)")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip shootSound;
-    [SerializeField] private AudioClip reloadSound;
-    [SerializeField] private AudioClip emptySound;
+    //[Header("Efectos de Audio (SFX)")]
+    //[SerializeField] private AudioSource audioSource;
+    //[SerializeField] private AudioClip shootSound;
+    //[SerializeField] private AudioClip reloadSound;
+    //[SerializeField] private AudioClip emptySound;
 
     [Header("Inputs")]
     [SerializeField] private InputActionReference shootAction;
@@ -53,24 +53,24 @@ public class LG_Shoot : MonoBehaviour
 
     private void Start()
     {
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSource.spatialBlend = 0f; // Audio 2D estéreo para el jugador
-        }
+        //if (audioSource == null)
+        //{
+        //    audioSource = GetComponent<AudioSource>();
+        //    if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        //    audioSource.playOnAwake = false;
+        //    audioSource.spatialBlend = 0f; // Audio 2D estéreo para el jugador
+        //}
 
-#if UNITY_EDITOR
-        if (shootSound == null) shootSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Shoot.wav");
-        if (reloadSound == null) reloadSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Reload.wav");
-        if (emptySound == null) emptySound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Empty.wav");
-#endif
+//#if UNITY_EDITOR
+//        if (shootSound == null) shootSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Shoot.wav");
+//        if (reloadSound == null) reloadSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Reload.wav");
+//        if (emptySound == null) emptySound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Empty.wav");
+//#endif
 
         if (playerInventory == null)
         {
             playerInventory = GetComponentInParent<LG_Inventory>();
-            if (playerInventory == null) playerInventory = FindObjectOfType<LG_Inventory>();
+            if (playerInventory == null) playerInventory = Object.FindFirstObjectByType<LG_Inventory>();
         }
 
         if (ammoText == null)
@@ -105,7 +105,7 @@ public class LG_Shoot : MonoBehaviour
         // Limpiar cualquier texto de municion suelto en la esquina superior del Canvas
         if (ammoText != null)
         {
-            var canvas = FindObjectOfType<Canvas>();
+            var canvas = Object.FindFirstObjectByType<Canvas>();
             if (canvas != null)
             {
                 for (int i = canvas.transform.childCount - 1; i >= 0; i--)
@@ -189,7 +189,8 @@ public class LG_Shoot : MonoBehaviour
             else
             {
                 // Sonido de gatillo sin balas (Dry Fire)
-                PlayAudio(emptySound, 0.7f);
+                //PlayAudio(emptySound, 0.7f);
+                SoundList.Instance.PlaySound("SFX_Empty");
                 fireRateTimer = fireRate * 1.5f;
             }
         }
@@ -199,11 +200,12 @@ public class LG_Shoot : MonoBehaviour
     {
         currentClip--;
         UpdateAmmoUI();
-        PlayAudio(shootSound, 1.0f);
+        //PlayAudio(shootSound, 1.0f);
+        SoundList.Instance.PlaySoundRandomPitch("SFX_Shoot", 0.95f, 1.05f);
 
         if (bulletPool == null)
         {
-            bulletPool = FindObjectOfType<LG_ObjectPool>();
+            bulletPool = Object.FindFirstObjectByType<LG_ObjectPool>();
         }
 
         GameObject bulletObj = bulletPool != null ? bulletPool.Get() : null;
@@ -222,7 +224,8 @@ public class LG_Shoot : MonoBehaviour
     {
         isReloading = true;
         UpdateAmmoUI();
-        PlayAudio(reloadSound, 0.9f);
+        //PlayAudio(reloadSound, 0.9f);
+        SoundList.Instance.PlaySound("SFX_Reload");
 
         yield return new WaitForSeconds(1.5f);
 
@@ -293,14 +296,14 @@ public class LG_Shoot : MonoBehaviour
                         $"{statusLine}";
     }
 
-    private void PlayAudio(AudioClip clip, float volume = 1.0f)
-    {
-        if (clip == null) return;
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-        }
-        audioSource.PlayOneShot(clip, volume);
-    }
+    //private void PlayAudio(AudioClip clip, float volume = 1.0f)
+    //{
+    //    if (clip == null) return;
+    //    if (audioSource == null)
+    //    {
+    //        audioSource = GetComponent<AudioSource>();
+    //        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+    //    }
+    //    audioSource.PlayOneShot(clip, volume);
+    //}
 }
