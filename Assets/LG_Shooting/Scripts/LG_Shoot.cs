@@ -189,8 +189,7 @@ public class LG_Shoot : MonoBehaviour
             else
             {
                 // Sonido de gatillo sin balas (Dry Fire)
-                //PlayAudio(emptySound, 0.7f);
-                SoundList.Instance.PlaySound("SFX_Empty");
+                if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Empty");
                 fireRateTimer = fireRate * 1.5f;
             }
         }
@@ -200,8 +199,7 @@ public class LG_Shoot : MonoBehaviour
     {
         currentClip--;
         UpdateAmmoUI();
-        //PlayAudio(shootSound, 1.0f);
-        SoundList.Instance.PlaySoundRandomPitch("SFX_Shoot", 0.95f, 1.05f);
+        if (SoundList.Instance != null) SoundList.Instance.PlaySoundRandomPitch("SFX_Shoot", 0.95f, 1.05f);
 
         if (bulletPool == null)
         {
@@ -224,8 +222,7 @@ public class LG_Shoot : MonoBehaviour
     {
         isReloading = true;
         UpdateAmmoUI();
-        //PlayAudio(reloadSound, 0.9f);
-        SoundList.Instance.PlaySound("SFX_Reload");
+        if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Reload");
 
         yield return new WaitForSeconds(1.5f);
 

@@ -79,6 +79,20 @@ public class LG_Inventory : MonoBehaviour
         return new Dictionary<string, int>(itemDictionary);
     }
 
+    public bool HasKey(string keySubString = "llave")
+    {
+        if (string.IsNullOrEmpty(keySubString)) return true;
+        if (GetItemCount(keySubString) > 0) return true;
+        foreach (var kvp in itemDictionary)
+        {
+            if (kvp.Value > 0 && kvp.Key.IndexOf(keySubString, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void SyncInspectorList()
     {
         inspectorItems.Clear();

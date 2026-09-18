@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UnityEngine.Audio;
 
 public class PrototypeSetupWindow : EditorWindow
 {
@@ -116,6 +117,40 @@ public class PrototypeSetupWindow : EditorWindow
 
         // 3. Crear Paredes Perimetrales de la Arena con hueco para la puerta
         CrearParedesArena(materialPared);
+
+        // 3.1 Configurar el Techo de la Arena (roof)
+        GameObject roof = GameObject.Find("roof");
+        if (roof == null)
+        {
+            roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            roof.name = "roof";
+        }
+        roof.transform.position = new Vector3(0.35f, 5.6f, -0.03f);
+        roof.transform.localScale = new Vector3(10f, 1f, 30f);
+        roof.transform.rotation = Quaternion.identity;
+        roof.GetComponent<Renderer>().sharedMaterial = materialPared;
+        Undo.RegisterCreatedObjectUndo(roof, "Crear Techo (roof)");
+
+        // 3.2 Configurar Gestores de Escena (TimeManager y DialogueManager)
+        GameObject timeMgrGO = GameObject.Find("TimeManager");
+        if (timeMgrGO == null)
+        {
+            timeMgrGO = new GameObject("TimeManager");
+        }
+        timeMgrGO.transform.position = Vector3.zero;
+        TimeManager timeMgr = timeMgrGO.GetComponent<TimeManager>();
+        if (timeMgr == null) timeMgr = timeMgrGO.AddComponent<TimeManager>();
+        Undo.RegisterCreatedObjectUndo(timeMgrGO, "Crear TimeManager");
+
+        GameObject dialogueMgrGO = GameObject.Find("DialogueManager");
+        if (dialogueMgrGO == null)
+        {
+            dialogueMgrGO = new GameObject("DialogueManager");
+        }
+        dialogueMgrGO.transform.position = Vector3.zero;
+        LG_DialogueManager dialogueMgr = dialogueMgrGO.GetComponent<LG_DialogueManager>();
+        if (dialogueMgr == null) dialogueMgr = dialogueMgrGO.AddComponent<LG_DialogueManager>();
+        Undo.RegisterCreatedObjectUndo(dialogueMgrGO, "Crear DialogueManager");
 
         // 4. Crear el Prefab de la Bala si no existe
         string prefabPath = "Assets/LG_Shooting/LGAssets/BalaPrototipo.prefab";
@@ -319,6 +354,23 @@ public class PrototypeSetupWindow : EditorWindow
         hudSO.FindProperty("healthSlider").objectReferenceValue = healthSlider;
         hudSO.FindProperty("inventoryText").objectReferenceValue = inventoryText;
         hudSO.ApplyModifiedProperties();
+
+        // Configurar SoundList en HUD_Canvas
+        SoundList soundListComp = canvasGO.GetComponent<SoundList>();
+        if (soundListComp == null) soundListComp = canvasGO.AddComponent<SoundList>();
+        ConfigurarSoundList(soundListComp);
+
+        // Configurar LG_TooltipManager y TooltipText en HUD_Canvas
+        LG_TooltipManager tooltipMgr = canvasGO.GetComponent<LG_TooltipManager>();
+        if (tooltipMgr == null) tooltipMgr = canvasGO.AddComponent<LG_TooltipManager>();
+        TMPro.TextMeshProUGUI tooltipTextTMP = ConfigurarTooltipText(canvasGO.transform);
+        SerializedObject tooltipSO = new SerializedObject(tooltipMgr);
+        tooltipSO.FindProperty("tooltipText").objectReferenceValue = tooltipTextTMP;
+        tooltipSO.ApplyModifiedProperties();
+
+        // Configurar DialoguePanel en HUD_Canvas y conectarlo con DialogueManager
+        ConfigurarDialogueUI(canvasGO.transform, dialogueMgr);
+
         Undo.RegisterCreatedObjectUndo(canvasGO, "Crear Canvas HUD");
 
         // Asegurar EventSystem
@@ -403,16 +455,17 @@ public class PrototypeSetupWindow : EditorWindow
         // 11. Crear Puerta de Salida en la pared Norte
         CrearPuertaSalida(new Vector3(0f, 0f, 14.8f), materialPuerta, materialMarco, sfxUnlock, sfxEmpty);
 
-        EditorUtility.DisplayDialog("Exito MVP", 
-            "¡El prototipo MVP se ha configurado con exito!\n\n" +
-            "✔ Arena cerrada con paredes perimetrales texturizadas y colisiones.\n" +
-            "✔ Texturas URP con Mapas de Normales (Suelo, Paredes y Puerta).\n" +
-            "✔ Puerta blindada de salida integrada al fondo (se abre con la Llave Roja).\n" +
-            "✔ Combate completo con SFX: Disparo, Recarga, Gatillazo seco y Swing/Hit de Bate.\n" +
-            "✔ HUD profesional en esquina inferior derecha con indicador dinámico de munición.\n" +
-            "✔ Sonidos de recolección de ítems y apertura de compuerta.\n" +
-            "✔ Zombis 3D animados y objetivos destructibles.\n\n" +
-            "¡Haz clic en Play para probar el MVP!", 
+        // 12. Crear Terminal interactiva de diálogo en la Arena
+        CrearDialogueTerminal(new Vector3(-13.515f, 1f, 12.233f));
+
+        EditorUtility.DisplayDialog("Éxito Prototipo", 
+            "¡El prototipo se ha configurado con éxito y paridad total con LG_Scene!\n\n" +
+            "✔ Arena cerrada con Suelo, Paredes y Techo (roof).\n" +
+            "✔ Gestores TimeManager y DialogueManager inicializados.\n" +
+            "✔ Canvas HUD con SoundList (12 SFX y Mixer), LG_TooltipManager, Sliders, Balas y Diálogos.\n" +
+            "✔ Terminal interactiva de diálogo y Puerta blindada de salida (Llave Roja).\n" +
+            "✔ Enemigos, Objetivos y Coleccionables sincronizados.\n\n" +
+            "¡Haz clic en Play para probar!", 
             "OK");
     }
 
@@ -533,10 +586,7 @@ public class PrototypeSetupWindow : EditorWindow
         doorSO.FindProperty("doorHinge").objectReferenceValue = bisagra.transform;
         doorSO.FindProperty("requiredKeyName").stringValue = "Llave Roja";
         doorSO.FindProperty("openAngle").floatValue = -95f;
-        doorSO.FindProperty("loadVictoryScene").boolValue = true;
-        doorSO.FindProperty("victorySceneIndex").intValue = 2; // Victory
-        if (sfxUnlock != null) doorSO.FindProperty("unlockSound").objectReferenceValue = sfxUnlock;
-        if (sfxDenied != null) doorSO.FindProperty("lockedDeniedSound").objectReferenceValue = sfxDenied;
+        doorSO.FindProperty("openDuration").floatValue = 1.2f;
         doorSO.ApplyModifiedProperties();
 
         // Collider Trigger para interacción
@@ -946,5 +996,245 @@ public class PrototypeSetupWindow : EditorWindow
         enemySO.ApplyModifiedProperties();
 
         Undo.RegisterCreatedObjectUndo(enemigoGO, $"Crear Enemigo {goName}");
+    }
+
+    private static void ConfigurarSoundList(SoundList soundListComp)
+    {
+        string audioDir = "Assets/LG_Shooting/LGAssets/Audio";
+        AudioMixer mixer = AssetDatabase.LoadAssetAtPath<AudioMixer>("Assets/AExport/GameMixer.mixer");
+        AudioMixerGroup sfxMixerGroup = null;
+        if (mixer != null)
+        {
+            AudioMixerGroup[] groups = mixer.FindMatchingGroups("SFX");
+            if (groups != null && groups.Length > 0) sfxMixerGroup = groups[0];
+        }
+
+        var soundDefs = new (string name, string file, float vol, float pitch)[]
+        {
+            ("SFX_Door_Unlock", "SFX_Door_Unlock.wav", 0.5f, 1f),
+            ("SFX_Empty", "SFX_Empty.wav", 0.5f, 1f),
+            ("SFX_Melee_Hit", "SFX_Melee_Hit.wav", 0.5f, 1f),
+            ("SFX_Melee_Swing", "SFX_Melee_Swing.wav", 0.6f, 1f),
+            ("SFX_Pickup", "SFX_Pickup.wav", 0.5f, 1f),
+            ("SFX_Pickup_Ammo", "SFX_Pickup_Ammo.wav", 0.5f, 1f),
+            ("SFX_Pickup_Battery", "SFX_Pickup_Battery.wav", 0.5f, 1f),
+            ("SFX_Pickup_Key", "SFX_Pickup_Key.wav", 0.5f, 1f),
+            ("SFX_Player_Hurt", "SFX_Player_Hurt.wav", 0.5f, 1f),
+            ("SFX_Reload", "SFX_Reload.wav", 0.5f, 1f),
+            ("SFX_Shoot", "SFX_Shoot.wav", 0.5f, 1f),
+            ("SFX_Zombie_Hit", "SFX_Zombie_Hit.wav", 0.5f, 1f)
+        };
+
+        SerializedObject slSO = new SerializedObject(soundListComp);
+        SerializedProperty listProp = slSO.FindProperty("soundList");
+        listProp.arraySize = soundDefs.Length;
+
+        for (int i = 0; i < soundDefs.Length; i++)
+        {
+            SerializedProperty elem = listProp.GetArrayElementAtIndex(i);
+            elem.FindPropertyRelative("audioName").stringValue = soundDefs[i].name;
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/{soundDefs[i].file}");
+            elem.FindPropertyRelative("clip").objectReferenceValue = clip;
+            elem.FindPropertyRelative("volume").floatValue = soundDefs[i].vol;
+            elem.FindPropertyRelative("pitch").floatValue = soundDefs[i].pitch;
+            elem.FindPropertyRelative("loop").boolValue = false;
+            elem.FindPropertyRelative("mixer").objectReferenceValue = sfxMixerGroup;
+        }
+
+        slSO.ApplyModifiedProperties();
+    }
+
+    private static TMPro.TextMeshProUGUI ConfigurarTooltipText(Transform canvasTransform)
+    {
+        Transform oldT = canvasTransform.Find("TooltipText");
+        GameObject go = oldT != null ? oldT.gameObject : new GameObject("TooltipText");
+        go.name = "TooltipText";
+        go.transform.SetParent(canvasTransform, false);
+
+        RectTransform rect = go.GetComponent<RectTransform>();
+        if (rect == null) rect = go.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(0f, -341f);
+        rect.sizeDelta = new Vector2(200f, 50f);
+
+        TMPro.TextMeshProUGUI tmp = go.GetComponent<TMPro.TextMeshProUGUI>();
+        if (tmp == null) tmp = go.AddComponent<TMPro.TextMeshProUGUI>();
+        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+        tmp.fontSize = 24;
+        tmp.color = Color.white;
+        tmp.text = "";
+        go.SetActive(false);
+
+        return tmp;
+    }
+
+    private static void ConfigurarDialogueUI(Transform canvasTransform, LG_DialogueManager dialogueMgr)
+    {
+        Transform panelT = canvasTransform.Find("DialoguePanel");
+        GameObject panelGO = panelT != null ? panelT.gameObject : new GameObject("DialoguePanel");
+        panelGO.name = "DialoguePanel";
+        panelGO.transform.SetParent(canvasTransform, false);
+
+        RectTransform panelRect = panelGO.GetComponent<RectTransform>();
+        if (panelRect == null) panelRect = panelGO.AddComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.pivot = new Vector2(0.5f, 0.5f);
+        panelRect.anchoredPosition = Vector2.zero;
+        panelRect.sizeDelta = new Vector2(1920f, 1080f);
+
+        Image panelImg = panelGO.GetComponent<Image>();
+        if (panelImg == null) panelImg = panelGO.AddComponent<Image>();
+        panelImg.color = new Color(0.08f, 0.08f, 0.12f, 0.5f);
+
+        // DialogueText
+        Transform textT = panelGO.transform.Find("DialogueText");
+        GameObject textGO = textT != null ? textT.gameObject : new GameObject("DialogueText");
+        textGO.name = "DialogueText";
+        textGO.transform.SetParent(panelGO.transform, false);
+
+        RectTransform textRect = textGO.GetComponent<RectTransform>();
+        if (textRect == null) textRect = textGO.AddComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0.5f, 0.5f);
+        textRect.anchorMax = new Vector2(0.5f, 0.5f);
+        textRect.pivot = new Vector2(0.5f, 0.5f);
+        textRect.anchoredPosition = new Vector2(0f, -286f);
+        textRect.sizeDelta = new Vector2(1000f, 250f);
+
+        TMPro.TextMeshProUGUI dtTMP = textGO.GetComponent<TMPro.TextMeshProUGUI>();
+        if (dtTMP == null) dtTMP = textGO.AddComponent<TMPro.TextMeshProUGUI>();
+        dtTMP.alignment = TMPro.TextAlignmentOptions.Center;
+        dtTMP.fontSize = 32;
+        dtTMP.color = Color.white;
+        dtTMP.richText = true;
+
+        // OptionsContainer
+        Transform optT = panelGO.transform.Find("OptionsContainer");
+        GameObject optGO = optT != null ? optT.gameObject : new GameObject("OptionsContainer");
+        optGO.name = "OptionsContainer";
+        optGO.transform.SetParent(panelGO.transform, false);
+
+        RectTransform optRect = optGO.GetComponent<RectTransform>();
+        if (optRect == null) optRect = optGO.AddComponent<RectTransform>();
+        optRect.anchorMin = new Vector2(0.5f, 0.5f);
+        optRect.anchorMax = new Vector2(0.5f, 0.5f);
+        optRect.pivot = new Vector2(0.5f, 0.5f);
+        optRect.anchoredPosition = new Vector2(0f, -448f);
+        optRect.sizeDelta = new Vector2(400f, 80f);
+
+        HorizontalLayoutGroup layout = optGO.GetComponent<HorizontalLayoutGroup>();
+        if (layout == null) layout = optGO.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.spacing = 30f;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+
+        Button truthBtn = CrearBotonDialogo(optGO.transform, "TruthButton", "Verdad", new Color(0.2f, 0.7f, 0.3f));
+        Button lieBtn = CrearBotonDialogo(optGO.transform, "LieButton", "Mentir", new Color(0.85f, 0.2f, 0.2f));
+
+        panelGO.SetActive(false);
+        optGO.SetActive(false);
+
+        if (dialogueMgr != null)
+        {
+            SerializedObject dSO = new SerializedObject(dialogueMgr);
+            dSO.FindProperty("dialoguePanel").objectReferenceValue = panelGO;
+            dSO.FindProperty("dialogueText").objectReferenceValue = dtTMP;
+            dSO.FindProperty("optionsContainer").objectReferenceValue = optGO;
+            dSO.FindProperty("truthButton").objectReferenceValue = truthBtn;
+            dSO.FindProperty("lieButton").objectReferenceValue = lieBtn;
+            dSO.FindProperty("typingSpeed").floatValue = 0.02f;
+            dSO.ApplyModifiedProperties();
+        }
+    }
+
+    private static Button CrearBotonDialogo(Transform parent, string goName, string buttonLabel, Color normalColor)
+    {
+        Transform oldB = parent.Find(goName);
+        GameObject btnGO = oldB != null ? oldB.gameObject : new GameObject(goName);
+        btnGO.name = goName;
+        btnGO.transform.SetParent(parent, false);
+
+        RectTransform btnRect = btnGO.GetComponent<RectTransform>();
+        if (btnRect == null) btnRect = btnGO.AddComponent<RectTransform>();
+        btnRect.sizeDelta = new Vector2(160f, 45f);
+
+        Image img = btnGO.GetComponent<Image>();
+        if (img == null) img = btnGO.AddComponent<Image>();
+        img.color = normalColor;
+
+        Button btn = btnGO.GetComponent<Button>();
+        if (btn == null) btn = btnGO.AddComponent<Button>();
+
+        Transform lblT = btnGO.transform.Find("Text");
+        GameObject lblGO = lblT != null ? lblT.gameObject : new GameObject("Text");
+        lblGO.name = "Text";
+        lblGO.transform.SetParent(btnGO.transform, false);
+
+        RectTransform lblRect = lblGO.GetComponent<RectTransform>();
+        if (lblRect == null) lblRect = lblGO.AddComponent<RectTransform>();
+        lblRect.anchorMin = Vector2.zero;
+        lblRect.anchorMax = Vector2.one;
+        lblRect.sizeDelta = Vector2.zero;
+        lblRect.anchoredPosition = Vector2.zero;
+
+        TMPro.TextMeshProUGUI tmp = lblGO.GetComponent<TMPro.TextMeshProUGUI>();
+        if (tmp == null) tmp = lblGO.AddComponent<TMPro.TextMeshProUGUI>();
+        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+        tmp.fontSize = 20;
+        tmp.text = buttonLabel;
+        tmp.color = Color.white;
+
+        return btn;
+    }
+
+    private static void CrearDialogueTerminal(Vector3 pos)
+    {
+        GameObject terminalGO = GameObject.Find("DialogueTerminal - Test");
+        if (terminalGO == null)
+        {
+            terminalGO = new GameObject("DialogueTerminal - Test");
+        }
+        terminalGO.name = "DialogueTerminal - Test";
+        terminalGO.transform.position = pos;
+        terminalGO.transform.rotation = Quaternion.identity;
+
+        BoxCollider col = terminalGO.GetComponent<BoxCollider>();
+        if (col == null) col = terminalGO.AddComponent<BoxCollider>();
+        col.isTrigger = true;
+        col.size = new Vector3(4f, 4f, 4f);
+        col.center = Vector3.zero;
+
+        LG_DialogueTrigger trigger = terminalGO.GetComponent<LG_DialogueTrigger>();
+        if (trigger == null) trigger = terminalGO.AddComponent<LG_DialogueTrigger>();
+        trigger.dialogueLines = new string[]
+        {
+            "Diálogo 1",
+            "Diálogo 2",
+            "Diálogo 3",
+            "Diálogo 4"
+        };
+
+        // Hijo visual Base (Cylinder)
+        Transform baseT = terminalGO.transform.Find("Base");
+        GameObject baseGO = baseT != null ? baseT.gameObject : GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        baseGO.name = "Base";
+        baseGO.transform.SetParent(terminalGO.transform);
+        baseGO.transform.localPosition = Vector3.zero;
+        baseGO.transform.localScale = Vector3.one;
+        baseGO.transform.localRotation = Quaternion.identity;
+
+        // Hijo visual Cube (Cube)
+        Transform cubeT = terminalGO.transform.Find("Cube");
+        GameObject cubeGO = cubeT != null ? cubeT.gameObject : GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cubeGO.name = "Cube";
+        cubeGO.transform.SetParent(terminalGO.transform);
+        cubeGO.transform.localPosition = new Vector3(0f, 1.032f, 0f);
+        cubeGO.transform.localScale = new Vector3(1f, 1f, 1.7681f);
+        cubeGO.transform.localRotation = Quaternion.identity;
+
+        Undo.RegisterCreatedObjectUndo(terminalGO, "Crear DialogueTerminal - Test");
     }
 }

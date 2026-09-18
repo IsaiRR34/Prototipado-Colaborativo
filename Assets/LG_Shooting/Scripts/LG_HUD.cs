@@ -32,6 +32,62 @@ public class LG_HUD : MonoBehaviour
             playerHealth = Object.FindFirstObjectByType<LG_PlayerHealth>();
         }
 
+        if (healthSlider == null)
+        {
+            GameObject hGo = GameObject.Find("HealthSlider");
+            if (hGo == null) hGo = GameObject.Find("HPSlider");
+            if (hGo != null) healthSlider = hGo.GetComponent<Slider>();
+            if (healthSlider == null)
+            {
+                Slider[] sliders = GetComponentsInChildren<Slider>(true);
+                foreach (var s in sliders)
+                {
+                    string sName = s.gameObject.name.ToLower();
+                    if (sName.Contains("health") || sName.Contains("hp"))
+                    {
+                        healthSlider = s;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (staminaSlider == null)
+        {
+            GameObject sGo = GameObject.Find("StaminaSlider");
+            if (sGo != null) staminaSlider = sGo.GetComponent<Slider>();
+            if (staminaSlider == null)
+            {
+                Slider[] sliders = GetComponentsInChildren<Slider>(true);
+                foreach (var s in sliders)
+                {
+                    if (s.gameObject.name.ToLower().Contains("stamina"))
+                    {
+                        staminaSlider = s;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (inventoryText == null)
+        {
+            GameObject invGo = GameObject.Find("InventoryText");
+            if (invGo != null) inventoryText = invGo.GetComponent<Text>();
+            if (inventoryText == null)
+            {
+                Text[] texts = GetComponentsInChildren<Text>(true);
+                foreach (var t in texts)
+                {
+                    if (t.gameObject.name.ToLower().Contains("invent"))
+                    {
+                        inventoryText = t;
+                        break;
+                    }
+                }
+            }
+        }
+
         // Subscribe to inventory update events
         if (playerInventory != null)
         {
