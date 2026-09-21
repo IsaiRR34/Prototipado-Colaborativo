@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 87ff32409cb728c41b36bc92b3441deb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 378678
+  packageName: 'FREE Demo: Low Poly Sci-Fi Laboratory 2 / Cosmic Retro'
+  packageVersion: 1.0
+  assetPath: Assets/room/Cosmic_Retro_Laboratory_2_Demo/Materials/Cosmic_Retro_Opacity.mat
+  uploadId: 912582

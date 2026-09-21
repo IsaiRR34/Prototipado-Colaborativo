@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e8f6bf6b32a09074f9a02cf4a7390ad0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 346024
+  packageName: 'FREE Demo: Low Poly Sci-Fi Laboratory / Cosmic Retro'
+  packageVersion: 1.1.0
+  assetPath: Assets/room/Cosmic_Retro_Laboratory_Props_Demo/DemoScene/Global Volume/Cosmic_Retro_Laboratory_Props.asset
+  uploadId: 901958

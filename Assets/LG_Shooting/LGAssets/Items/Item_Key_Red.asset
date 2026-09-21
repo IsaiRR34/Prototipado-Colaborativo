@@ -22,4 +22,4 @@ MonoBehaviour:
   isPermanent: 1
   healAmount: 0
   repairAmount: 0
-  pickupSound: {fileID: 0}
+  pickupSound: {fileID: 8300000, guid: 763422b7dbef4d7a964090289107bcd8, type: 3}
