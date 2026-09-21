@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.UI;
-using System.Collections;
 
 public class VolumeControl : MonoBehaviour
 {
@@ -12,47 +11,36 @@ public class VolumeControl : MonoBehaviour
     [SerializeField] private string masterParam = "VolumeMaster";
     [SerializeField] private string musicParam = "VolumeMusic";
     [SerializeField] private string sfxParam = "VolumeSFX";
-    [SerializeField] private string ambientParam = "VolumeAmbience"; // Nuevo parámetro
+    [SerializeField] private string ambientParam = "VolumeAmbience";
 
     [Header("Sliders")]
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider musicSlider;
     [SerializeField] private Slider sfxSlider;
-    [SerializeField] private Slider ambientSlider; // Nuevo Slider
+    [SerializeField] private Slider ambientSlider;
 
     private void Start()
     {
-        // Retrasamos 1 frame la inicialización para asegurar que el AudioMixer esté listo.
-        StartCoroutine(InitVolumesRoutine());
-    }
+        // 1. Definimos el 75% como valor fijo
+        float sweetSpot = 0.75f;
 
-    private IEnumerator InitVolumesRoutine()
-    {
-        yield return null;
+        // 2. Configuramos los límites de los sliders y les inyectamos el 75% visualmente
+        if (masterSlider != null) { masterSlider.minValue = 0.0001f; masterSlider.maxValue = 1f; masterSlider.SetValueWithoutNotify(sweetSpot); }
+        if (musicSlider != null) { musicSlider.minValue = 0.0001f; musicSlider.maxValue = 1f; musicSlider.SetValueWithoutNotify(sweetSpot); }
+        if (sfxSlider != null) { sfxSlider.minValue = 0.0001f; sfxSlider.maxValue = 1f; sfxSlider.SetValueWithoutNotify(sweetSpot); }
+        if (ambientSlider != null) { ambientSlider.minValue = 0.0001f; ambientSlider.maxValue = 1f; ambientSlider.SetValueWithoutNotify(sweetSpot); }
 
-        // Fijamos el "sweet spot" en 0.75f (75%)
-        ConfigurarSlider(masterSlider, masterParam, "Pref_MasterVol", 0.75f);
-        ConfigurarSlider(musicSlider, musicParam, "Pref_MusicVol", 0.75f);
-        ConfigurarSlider(sfxSlider, sfxParam, "Pref_SFXVol", 0.75f);
-        ConfigurarSlider(ambientSlider, ambientParam, "Pref_AmbientVol", 0.75f); // Configuramos el ambiental
+        // 3. LLAMAMOS A LAS FUNCIONES DIRECTAMENTE (Tu método propuesto)
+        SetMasterVolume(sweetSpot);
+        SetMusicVolume(sweetSpot);
+        SetSFXVolume(sweetSpot);
+        SetAmbientVolume(sweetSpot);
 
-        // Listeners automáticos
+        // 4. Suscribimos los eventos de la UI para cuando decidas moverlos en pausa
         if (masterSlider != null) masterSlider.onValueChanged.AddListener(SetMasterVolume);
         if (musicSlider != null) musicSlider.onValueChanged.AddListener(SetMusicVolume);
         if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(SetSFXVolume);
         if (ambientSlider != null) ambientSlider.onValueChanged.AddListener(SetAmbientVolume);
-    }
-
-    private void ConfigurarSlider(Slider slider, string paramName, string prefKey, float defaultValue)
-    {
-        if (slider == null || audioMixer == null) return;
-
-        slider.minValue = 0.0001f;
-        slider.maxValue = 1f;
-
-        float savedLinear = PlayerPrefs.GetFloat(prefKey, defaultValue);
-        slider.SetValueWithoutNotify(savedLinear);
-        AplicarVolumen(paramName, savedLinear);
     }
 
     public void SetMasterVolume(float value)

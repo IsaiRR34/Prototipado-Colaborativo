@@ -16,21 +16,7 @@ public class LG_HUD : MonoBehaviour
 
     private void Start()
     {
-        // Try finding components automatically if not assigned in Inspector
-        if (playerMovement == null)
-        {
-            playerMovement = Object.FindFirstObjectByType<RIMovement>();
-        }
-
-        if (playerInventory == null)
-        {
-            playerInventory = Object.FindFirstObjectByType<LG_Inventory>();
-        }
-
-        if (playerHealth == null)
-        {
-            playerHealth = Object.FindFirstObjectByType<LG_PlayerHealth>();
-        }
+        FindPlayerReferences();
 
         if (healthSlider == null)
         {
@@ -87,10 +73,22 @@ public class LG_HUD : MonoBehaviour
                 }
             }
         }
+    }
 
-        // Subscribe to inventory update events
+    private void FindPlayerReferences()
+    {
+        if (playerMovement == null) playerMovement = Object.FindFirstObjectByType<RIMovement>();
+        if (playerHealth == null) playerHealth = Object.FindFirstObjectByType<LG_PlayerHealth>();
+
+        if (playerInventory == null)
+        {
+            playerInventory = Object.FindFirstObjectByType<LG_Inventory>();
+        }
+
+        // CORRECCIÓN: La suscripción ahora se hace siempre, garantizando que el texto se actualice.
         if (playerInventory != null)
         {
+            playerInventory.OnInventoryChanged -= UpdateInventoryUI;
             playerInventory.OnInventoryChanged += UpdateInventoryUI;
             UpdateInventoryUI();
         }
@@ -106,22 +104,23 @@ public class LG_HUD : MonoBehaviour
 
     private void Update()
     {
-        // Update Stamina Slider in real time
+        // FAILSAFE
+        if (playerHealth == null || playerMovement == null || playerInventory == null)
+        {
+            FindPlayerReferences();
+        }
+
         if (staminaSlider != null && playerMovement != null)
         {
             staminaSlider.value = playerMovement.EstaminaNormalizada();
         }
 
-        // Update Health Slider in real time
         if (healthSlider != null && playerHealth != null)
         {
             healthSlider.value = playerHealth.GetHealthNormalized();
         }
     }
 
-    /// <summary>
-    /// Compiles a list of items currently in inventory and displays them on screen.
-    /// </summary>
     private void UpdateInventoryUI()
     {
         if (inventoryText == null) return;

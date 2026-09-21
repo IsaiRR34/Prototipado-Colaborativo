@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using DG.Tweening;
 using System.Collections;
-using UnityEngine.SceneManagement; // Agregado para detectar escenas
+using UnityEngine.SceneManagement;
 
 public class TimeManager : MonoBehaviour
 {
@@ -55,11 +55,56 @@ public class TimeManager : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
+    // 1. Suscribirnos a los cambios de escena de Unity
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
     private void Start()
     {
+        InitializeForScene();
+    }
+
+    // 2. Este método se ejecutará automáticamente cada vez que cambiemos de escena
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        InitializeForScene();
+    }
+
+    // 3. Rutina centralizada que garantiza que la escena inicie limpia
+    private void InitializeForScene()
+    {
+        // Limpiar animaciones o pausas atoradas
+        pauseTween?.Kill();
+        if (freezeFrameRoutine != null) StopCoroutine(freezeFrameRoutine);
+
+        isPaused = false;
+        Time.timeScale = 1f;
+
         EliminarFadersResiduales();
+
+        // Buscar el Canvas de la escena actual
         EnsurePauseScreen();
+
+        // APAGAR EL MENÚ DE INMEDIATO
+        if (pauseScreen != null)
+        {
+            pauseScreen.alpha = 0f;
+            pauseScreen.blocksRaycasts = false;
+            pauseScreen.interactable = false;
+            pauseScreen.gameObject.SetActive(false);
+        }
+
         EnsureEventSystem();
+
+        // Limpiamos y buscamos al jugador de la nueva escena
+        playerRef = null;
         FindPlayer();
     }
 
@@ -97,11 +142,9 @@ public class TimeManager : MonoBehaviour
 
     public CanvasGroup EnsurePauseScreen()
     {
-        if (pauseScreen != null)
+        // Si el objeto fue destruido al cambiar de escena, Unity lo lee como nulo y lo volvemos a buscar
+        if (pauseScreen != null && pauseScreen.gameObject != null)
         {
-            pauseScreen.alpha = 0f;
-            pauseScreen.blocksRaycasts = false;
-            pauseScreen.interactable = false;
             return pauseScreen;
         }
 
@@ -151,10 +194,6 @@ public class TimeManager : MonoBehaviour
 
         if (pauseScreen != null)
         {
-            pauseScreen.alpha = 0f;
-            pauseScreen.blocksRaycasts = false;
-            pauseScreen.interactable = false;
-
             UnityEngine.UI.Button resumeBtn = pauseScreen.GetComponentInChildren<UnityEngine.UI.Button>(true);
             if (resumeBtn != null)
             {
@@ -195,11 +234,9 @@ public class TimeManager : MonoBehaviour
 
     private void Update()
     {
-        // 1. Evitar que la pausa funcione en las pantallas de fin de juego.
         string currentScene = SceneManager.GetActiveScene().name;
-        if (currentScene == "Victory" || currentScene == "GameOver")
+        if (currentScene == "Victory" || currentScene == "GameOver" || currentScene == "MainMenu")
         {
-            // Si está pausado de alguna manera rara, lo reanudamos a la fuerza
             if (isPaused) TogglePause(false);
             return;
         }
@@ -273,6 +310,7 @@ public class TimeManager : MonoBehaviour
                     .OnComplete(() =>
                     {
                         Time.timeScale = 1f;
+                        pauseScreen.gameObject.SetActive(false); // APAGAR EL MENÚ AL REANUDAR
                     });
             }
             else
