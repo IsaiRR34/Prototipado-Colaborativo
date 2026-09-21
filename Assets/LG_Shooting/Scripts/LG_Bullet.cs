@@ -40,33 +40,67 @@ public class LG_Bullet : MonoBehaviour
     // --- 3D Collision Handlers ---
     private void OnTriggerEnter(Collider other)
     {
-        Rigidbody rb = other.attachedRigidbody;
-        if (rb != null && !rb.isKinematic)
+        // Ignorar colisiones con el propio jugador que dispara
+        if (other.GetComponentInParent<LG_PlayerHealth>() != null) return;
+
+        // Apply damage if we hit the boss
+        BossBabyController bossTrigger = other.GetComponentInParent<BossBabyController>();
+        if (bossTrigger != null)
         {
-            rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+            bool isHeadshot = other.name.ToLower().Contains("head");
+            bossTrigger.TakeDamage(1f, isHeadshot);
+            ReturnToPool();
+            return;
         }
 
         // Apply damage if we hit an enemy
         LG_Enemy enemy = other.GetComponent<LG_Enemy>();
+        Rigidbody rb = other.attachedRigidbody;
         if (enemy == null && rb != null)
         {
             enemy = rb.GetComponent<LG_Enemy>();
         }
         if (enemy != null)
         {
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+            }
             enemy.TakeDamage(1f);
+            ReturnToPool();
+            return;
         }
 
-        // Return to pool when hitting another collider
+        // Ignorar otros triggers que sean zonas de recogida o checkpoints
+        if (other.isTrigger) return;
+
+        if (rb != null && !rb.isKinematic)
+        {
+            rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+        }
+
+        // Return to pool when hitting solid collider
         ReturnToPool();
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        // Ignorar colisiones con el propio jugador
+        if (collision.gameObject.GetComponentInParent<LG_PlayerHealth>() != null) return;
         Rigidbody rb = collision.rigidbody;
         if (rb != null && !rb.isKinematic)
         {
             rb.AddForce(transform.forward * 8f, ForceMode.Impulse);
+        }
+
+        // Apply damage if we hit the boss
+        BossBabyController bossCol = collision.gameObject.GetComponentInParent<BossBabyController>();
+        if (bossCol != null)
+        {
+            bool isHeadshot = collision.gameObject.name.ToLower().Contains("head");
+            bossCol.TakeDamage(1f, isHeadshot);
+            ReturnToPool();
+            return;
         }
 
         // Apply damage if we hit an enemy

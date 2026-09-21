@@ -96,19 +96,27 @@ public class LG_PlayerHealth : MonoBehaviour
         // Respawn sequence (returns to starting position and refills health)
         currentHealth = maxHealth;
         OnHealthChanged?.Invoke();
-        
-        transform.position = new Vector3(0f, 1f, 0f);
-        
-        // Reset rotation
-        transform.rotation = Quaternion.identity;
 
-        // If there's a CharacterController, we should temporarily disable it to avoid teleport physics conflicts
+        Vector3 respawnPos = SafeRoomCheckpoint.HasCheckpoint ? SafeRoomCheckpoint.LastSafePosition : new Vector3(0f, 1f, 0f);
+
+        // If there's a CharacterController, temporarily disable it to avoid teleport physics conflicts
         CharacterController cc = GetComponent<CharacterController>();
         if (cc != null)
         {
             cc.enabled = false;
-            transform.position = new Vector3(0f, 1f, 0f);
+            transform.position = respawnPos;
+            transform.rotation = Quaternion.identity;
             cc.enabled = true;
+        }
+        else
+        {
+            transform.position = respawnPos;
+            transform.rotation = Quaternion.identity;
+        }
+
+        if (SafeRoomCheckpoint.HasCheckpoint)
+        {
+            LG_TooltipManager.Instance?.ShowTooltipTemporary("REAPARICIÓN EN SALA SEGURA", 2.5f);
         }
     }
 }
