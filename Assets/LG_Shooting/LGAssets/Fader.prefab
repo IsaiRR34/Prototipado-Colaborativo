@@ -66,16 +66,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
-  m_FillMethod: 4
+  m_FillMethod: 0
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 0.87
 --- !u!114 &1415825692035352273
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -90,6 +90,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   image: {fileID: 6944821358725823661}
   tweenTime: 1
+  fadeOutOnStart: 0
   onEndFadeEvent:
     m_PersistentCalls:
       m_Calls:

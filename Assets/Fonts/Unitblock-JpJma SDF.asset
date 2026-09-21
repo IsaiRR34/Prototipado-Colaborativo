@@ -9097,7 +9097,7 @@ Material:
     - _FaceDilate: 0
     - _FaceUVSpeedX: 0
     - _FaceUVSpeedY: 0
-    - _GlowInner: 0.05
+    - _GlowInner: 1
     - _GlowOffset: 0
     - _GlowOuter: 0.05
     - _GlowPower: 1
