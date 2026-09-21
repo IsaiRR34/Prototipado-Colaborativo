@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using UnityEngine.SceneManagement;
 
 public class LG_PlayerHealth : MonoBehaviour
 {
@@ -7,31 +8,16 @@ public class LG_PlayerHealth : MonoBehaviour
     [SerializeField] private float maxHealth = 100f;
     private float currentHealth;
 
+    [Header("Game Over Settings")]
+    [Tooltip("Nombre exacto de la escena de Game Over en el Build Settings")]
+    [SerializeField] private string gameOverSceneName = "GameOver";
+
     public event Action OnHealthChanged;
     public event Action OnPlayerDeath;
-
-    //[Header("Efectos de Audio (SFX)")]
-    //[SerializeField] private AudioSource audioSource;
-    //[SerializeField] private AudioClip hurtSound;
 
     private void Start()
     {
         currentHealth = maxHealth;
-
-        //if (audioSource == null)
-        //{
-        //    audioSource = GetComponent<AudioSource>();
-        //    if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-        //    audioSource.playOnAwake = false;
-        //    audioSource.spatialBlend = 0f; // 2D estéreo local
-        //}
-
-//#if UNITY_EDITOR
-//        if (hurtSound == null)
-//        {
-//            hurtSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Player_Hurt.wav");
-//        }
-//#endif
     }
 
     /// <summary>
@@ -45,11 +31,6 @@ public class LG_PlayerHealth : MonoBehaviour
         currentHealth -= damage;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
         Debug.Log($"[LG_PlayerHealth] Player took {damage} damage! Current health: {currentHealth}/{maxHealth}", this);
-
-        //if (audioSource != null && hurtSound != null)
-        //{
-        //    audioSource.PlayOneShot(hurtSound, 1.0f);
-        //}
 
         if (SoundList.Instance != null)
         {
@@ -90,33 +71,22 @@ public class LG_PlayerHealth : MonoBehaviour
 
     private void Die()
     {
-        Debug.Log("[LG_PlayerHealth] Player has died!", this);
+        Debug.Log("[LG_PlayerHealth] Player has died! Loading Game Over...", this);
         OnPlayerDeath?.Invoke();
 
-        // Respawn sequence (returns to starting position and refills health)
-        currentHealth = maxHealth;
-        OnHealthChanged?.Invoke();
+        // 1. Liberar el cursor para poder usar los botones en la pantalla de Game Over
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
 
-        Vector3 respawnPos = SafeRoomCheckpoint.HasCheckpoint ? SafeRoomCheckpoint.LastSafePosition : new Vector3(0f, 1f, 0f);
-
-        // If there's a CharacterController, temporarily disable it to avoid teleport physics conflicts
-        CharacterController cc = GetComponent<CharacterController>();
-        if (cc != null)
+        // 2. Detener música de fondo si es necesario
+        if (SoundList.Instance != null)
         {
-            cc.enabled = false;
-            transform.position = respawnPos;
-            transform.rotation = Quaternion.identity;
-            cc.enabled = true;
-        }
-        else
-        {
-            transform.position = respawnPos;
-            transform.rotation = Quaternion.identity;
+            SoundList.Instance.StopSound("BGM_Gameplay");
+            SoundList.Instance.StopSound("BGM_Zona1"); // Agrega las zonas que necesites detener
+            SoundList.Instance.StopSound("BGM_Zona2");
         }
 
-        if (SafeRoomCheckpoint.HasCheckpoint)
-        {
-            LG_TooltipManager.Instance?.ShowTooltipTemporary("REAPARICIÓN EN SALA SEGURA", 2.5f);
-        }
+        // 3. Cargar la escena de derrota
+        SceneManager.LoadScene(gameOverSceneName);
     }
 }

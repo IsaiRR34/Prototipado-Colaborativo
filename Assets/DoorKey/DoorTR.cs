@@ -105,7 +105,7 @@ public class DoorTR : MonoBehaviour
         }
 
         // 3. Buscar el Fader en escena, si existe, hacer fundido a negro y luego cargar
-        Fader fader = FindObjectOfType<Fader>();
+        Fader fader = Object.FindFirstObjectByType<Fader>();
         if (fader != null)
         {
             // Asignar el evento dinámicamente para cargar la escena tras oscurecer

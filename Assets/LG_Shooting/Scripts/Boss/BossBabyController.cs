@@ -52,7 +52,6 @@ public class BossBabyController : MonoBehaviour
     private CharacterController characterController;
     private bool isCasting = false;
 
-    // Control de activación de la arena
     public bool isActivated { get; private set; } = false;
 
     public BossPhase CurrentPhase => currentPhase;
@@ -80,7 +79,6 @@ public class BossBabyController : MonoBehaviour
             if (p != null) targetPlayer = p.transform;
         }
 
-        // Nos aseguramos de ocultar la UI si el jefe aún no está activo
         if (bossUIRoot == null)
         {
             var ui = GameObject.Find("BossHealthBarContainer");
@@ -89,7 +87,6 @@ public class BossBabyController : MonoBehaviour
         if (bossUIRoot != null) bossUIRoot.SetActive(false);
     }
 
-    // Nueva función llamada por el Trigger de la arena
     public void ActivateBoss()
     {
         if (isActivated) return;
@@ -97,6 +94,7 @@ public class BossBabyController : MonoBehaviour
 
         SetupBossUI();
         StartCoroutine(BossBehaviorLoop());
+        StartCoroutine(RandomDialogueRoutine()); // Inicia los diálogos aleatorios
 
         LG_TooltipManager.Instance?.ShowTooltipTemporary("<color=#EF4444><b>¡EL BEBÉ MALDITO HA DESPERTADO!</b></color>", 3f);
     }
@@ -136,6 +134,37 @@ public class BossBabyController : MonoBehaviour
             }
 
             yield return null;
+        }
+    }
+
+    // --- CORRUTINA: DIÁLOGOS ALEATORIOS ---
+    private IEnumerator RandomDialogueRoutine()
+    {
+        while (isActivated && currentPhase != BossPhase.Dead)
+        {
+            // Tiempo aleatorio entre 6 y 14 segundos antes del siguiente diálogo
+            float waitTime = Random.Range(6f, 14f);
+            yield return new WaitForSeconds(waitTime);
+
+            // No reproducir si está aturdido o muerto
+            if (currentPhase != BossPhase.Dead && currentPhase != BossPhase.Stunned)
+            {
+                int rand = Random.Range(0, 2); // Devuelve 0 o 1
+                if (SoundList.Instance != null)
+                {
+                    SoundList.Instance.PlaySoundAtPosition("SFX_BabyDialogue" + rand, transform.position);
+                }
+            }
+        }
+    }
+
+    // --- MÉTODO: SONIDO DE ATAQUE ALEATORIO ---
+    private void PlayRandomAttackSound()
+    {
+        if (SoundList.Instance != null)
+        {
+            int rand = Random.Range(1, 4);
+            SoundList.Instance.PlaySoundAtPosition("SFX_BabyAttack" + rand, transform.position);
         }
     }
 
@@ -202,6 +231,8 @@ public class BossBabyController : MonoBehaviour
             bp.Initialize(dir);
         }
 
+        // Llamamos al grito de ataque y al efecto de disparo
+        PlayRandomAttackSound();
         if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Shoot");
     }
 
@@ -224,6 +255,9 @@ public class BossBabyController : MonoBehaviour
         if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Zombie_Hit");
 
         yield return new WaitForSeconds(0.8f);
+
+        // Llamamos al grito de ataque justo al iniciar la embestida
+        PlayRandomAttackSound();
 
         isCharging = true;
         float maxChargeDuration = 2.5f;
@@ -299,7 +333,6 @@ public class BossBabyController : MonoBehaviour
 
     public void TakeDamage(float damage, bool isHeadshot)
     {
-        // Ignorar todo el daño si el jefe no ha sido activado cruzando el trigger
         if (!isActivated || currentPhase == BossPhase.Dead) return;
 
         float finalDmg = damage;
