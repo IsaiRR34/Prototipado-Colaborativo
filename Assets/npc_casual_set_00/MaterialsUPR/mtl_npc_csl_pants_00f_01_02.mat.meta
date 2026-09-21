@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0030f8a29d3d4eb46a6dc456ec169ba9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326131
+  packageName: npc_casual_set_00
+  packageVersion: 1.0.3
+  assetPath: Assets/npc_casual_set_00/MaterialsUPR/mtl_npc_csl_pants_00f_01_02.mat
+  uploadId: 807672

@@ -17,92 +17,48 @@ public class VolumeControl : MonoBehaviour
     [SerializeField] private Slider musicSlider;
     [SerializeField] private Slider sfxSlider;
 
-    private const float MinDb = -80f;
-
-    private void Awake()
-    {
-        EnsureReferences();
-    }
-
     private void Start()
     {
-        EnsureReferences();
+        // 1. Obtener valores: si no hay partida guardada, forzamos el 75% (0.75f)
+        float masterVol = PlayerPrefs.HasKey("Pref_MasterVol") ? PlayerPrefs.GetFloat("Pref_MasterVol") : 0.75f;
+        float musicVol = PlayerPrefs.HasKey("Pref_MusicVol") ? PlayerPrefs.GetFloat("Pref_MusicVol") : 0.75f;
+        float sfxVol = PlayerPrefs.HasKey("Pref_SFXVol") ? PlayerPrefs.GetFloat("Pref_SFXVol") : 0.75f;
 
-        ConfigurarSlider(masterSlider, masterParam, "Pref_MasterVol");
-        ConfigurarSlider(musicSlider, musicParam, "Pref_MusicVol");
-        ConfigurarSlider(sfxSlider, sfxParam, "Pref_SFXVol");
+        // 2. Actualizar los Sliders visualmente sin activar sus eventos automáticos
+        if (masterSlider != null) { masterSlider.minValue = 0.0001f; masterSlider.maxValue = 1f; masterSlider.SetValueWithoutNotify(masterVol); }
+        if (musicSlider != null) { musicSlider.minValue = 0.0001f; musicSlider.maxValue = 1f; musicSlider.SetValueWithoutNotify(musicVol); }
+        if (sfxSlider != null) { sfxSlider.minValue = 0.0001f; sfxSlider.maxValue = 1f; sfxSlider.SetValueWithoutNotify(sfxVol); }
 
-        if (masterSlider != null)
-        {
-            masterSlider.onValueChanged.RemoveListener(SetMasterVolume);
-            masterSlider.onValueChanged.AddListener(SetMasterVolume);
-        }
-        if (musicSlider != null)
-        {
-            musicSlider.onValueChanged.RemoveListener(SetMusicVolume);
-            musicSlider.onValueChanged.AddListener(SetMusicVolume);
-        }
-        if (sfxSlider != null)
-        {
-            sfxSlider.onValueChanged.RemoveListener(SetSFXVolume);
-            sfxSlider.onValueChanged.AddListener(SetSFXVolume);
-        }
-    }
+        // 3. LLAMAR A LAS FUNCIONES DIRECTAMENTE (Tu propuesta)
+        SetMasterVolume(masterVol);
+        SetMusicVolume(musicVol);
+        SetSFXVolume(sfxVol);
 
-    private void EnsureReferences()
-    {
-        if (audioMixer == null)
-        {
-            audioMixer = Resources.Load<AudioMixer>("GameMixer");
-#if UNITY_EDITOR
-            if (audioMixer == null)
-            {
-                audioMixer = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioMixer>("Assets/AExport/GameMixer.mixer");
-            }
-#endif
-        }
-
-        if (masterSlider == null || musicSlider == null || sfxSlider == null)
-        {
-            Slider[] allSliders = GetComponentsInChildren<Slider>(true);
-            foreach (var s in allSliders)
-            {
-                string n = s.gameObject.name.ToLower();
-                if (masterSlider == null && n.Contains("master")) masterSlider = s;
-                else if (musicSlider == null && n.Contains("music")) musicSlider = s;
-                else if (sfxSlider == null && n.Contains("sfx")) sfxSlider = s;
-            }
-        }
-    }
-
-    private void ConfigurarSlider(Slider slider, string paramName, string prefKey)
-    {
-        if (slider == null) return;
-
-        slider.minValue = 0.0001f;
-        slider.maxValue = 1f;
-
-        float savedLinear = PlayerPrefs.GetFloat(prefKey, 0.75f);
-        slider.value = savedLinear;
-        AplicarVolumen(paramName, savedLinear);
+        // 4. Suscribir los eventos para cuando el jugador mueva los sliders en pausa
+        if (masterSlider != null) masterSlider.onValueChanged.AddListener(SetMasterVolume);
+        if (musicSlider != null) musicSlider.onValueChanged.AddListener(SetMusicVolume);
+        if (sfxSlider != null) sfxSlider.onValueChanged.AddListener(SetSFXVolume);
     }
 
     public void SetMasterVolume(float value)
     {
         AplicarVolumen(masterParam, value);
         PlayerPrefs.SetFloat("Pref_MasterVol", value);
+        PlayerPrefs.Save();
     }
 
     public void SetMusicVolume(float value)
     {
         AplicarVolumen(musicParam, value);
         PlayerPrefs.SetFloat("Pref_MusicVol", value);
+        PlayerPrefs.Save();
     }
 
     public void SetSFXVolume(float value)
     {
         AplicarVolumen(sfxParam, value);
         PlayerPrefs.SetFloat("Pref_SFXVol", value);
+        PlayerPrefs.Save();
     }
 
     private void AplicarVolumen(string parameter, float linearValue)

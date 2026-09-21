@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c4d0d4f742513f44db74347403e088ba
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326131
+  packageName: npc_casual_set_00
+  packageVersion: 1.0.3
+  assetPath: Assets/npc_casual_set_00/MaterialsUPR/mtl_npc_csl_shirtopenrolled_00f_01_01bw.mat
+  uploadId: 807672

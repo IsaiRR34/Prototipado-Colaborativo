@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 618d1634646078e4988609eaa2ef134f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 326131
+  packageName: npc_casual_set_00
+  packageVersion: 1.0.3
+  assetPath: Assets/npc_casual_set_00/MaterialsUPR/mtl_npc_hmn_face_01f_04_01.mat
+  uploadId: 807672
