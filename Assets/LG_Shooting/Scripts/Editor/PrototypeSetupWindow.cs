@@ -3,6 +3,8 @@ using UnityEditor;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using UnityEngine.Audio;
+using UnityEngine.AI;
+using UnityEngine.Rendering.Universal;
 
 public class PrototypeSetupWindow : EditorWindow
 {
@@ -14,24 +16,72 @@ public class PrototypeSetupWindow : EditorWindow
 
     private void OnGUI()
     {
-        GUILayout.Label("Configurador de Prototipo MVP (URP)", EditorStyles.boldLabel);
-        GUILayout.Space(10);
-        GUILayout.Label("Esta herramienta preparara la escena como un MVP completo con:\n" +
-                      "- Arena cerrada (suelo y paredes perimetrales con colisiones).\n" +
-                      "- Texturas aplicadas en Suelo, Paredes y Puerta de salida.\n" +
-                      "- Puerta blindada integrada en la pared norte conectada a la Llave Roja y Victoria.\n" +
-                      "- Jugador con RIMovement, LG_Shoot y combate melee con bate (Hand).\n" +
-                      "- HUD con barras de Vida, Estamina, Inventario, Balas y Reticula (Crosshair).\n" +
-                      "- Coleccionables sincronizados ('Munición', 'Bateria', 'Llave Roja').\n" +
-                      "- Zombis 3D animados y torre fisica interactiva.\n\n" +
-                      "Asegurate de guardar la escena antes de proceder.", EditorStyles.wordWrappedLabel);
-        
-        GUILayout.Space(20);
+        GUILayout.Label("Configurador de Prototipos y Niveles (URP)", EditorStyles.boldLabel);
+        GUILayout.Space(6);
 
-        if (GUILayout.Button("Generar Prototipo Completo", GUILayout.Height(40)))
+        // --- SECCIÓN 1: PROTOTIPO BASE (CANÓNICO) ---
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        GUILayout.Label("1. Prototipo Base (Paridad 1:1 LG_Scene)", EditorStyles.boldLabel);
+        GUILayout.Label("Genera la arena de combate cerrada con armas, zombis, puzle de terminal de diálogo y puerta de salida canónica.", EditorStyles.wordWrappedLabel);
+        GUILayout.Space(6);
+        if (GUILayout.Button("Generar Prototipo Base Canónico", GUILayout.Height(35)))
         {
             GenerarPrototipo();
         }
+        EditorGUILayout.EndVertical();
+
+        GUILayout.Space(12);
+
+        // --- SECCIÓN 2: SECUENCIA DE NIVELES DOOM (GDD) ---
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        GUILayout.Label("2. Secuencia Completa Estilo DOOM (GDD Proyecto Sombra Rural)", EditorStyles.boldLabel);
+        GUILayout.Label("Genera la progresión de 3 sectores:\n" +
+                        "• Sector 1 (Las Afueras): Safe Room 1, Munición, Vendas, Zombis y Llave Roja.\n" +
+                        "• Sector 2 (Casco Urbano): Zonas oscuras (Linterna [2/F]), Recursos y Llave Azul.\n" +
+                        "• Sector 3 (Altar Ritual): Pilares de cobertura, Jefe Final 'El Bebé Maldito' (2 Fases), y Compuerta Final.\n" +
+                        "• HUD con barra de vida del Jefe y Pantalla de Intermisión Retro.", EditorStyles.wordWrappedLabel);
+        GUILayout.Space(8);
+
+        GUI.backgroundColor = new Color(0.3f, 0.8f, 0.4f);
+        if (GUILayout.Button("Generar Nivel DOOM en Nueva Escena (Recomendado)", GUILayout.Height(35)))
+        {
+            DoomLevelGenerator.GenerarSecuenciaDoomNuevaEscena();
+        }
+        GUI.backgroundColor = Color.white;
+
+        GUILayout.Space(4);
+        if (GUILayout.Button("Generar Nivel DOOM en Escena Actual", GUILayout.Height(28)))
+        {
+            DoomLevelGenerator.GenerarSecuenciaDoomEscenaActual();
+        }
+        EditorGUILayout.EndVertical();
+
+        GUILayout.Space(12);
+
+        // --- SECCIÓN 3: CONFIGURAR / REPARAR SOLO JUGADOR ---
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        GUILayout.Label("3. Configuración Independiente del Jugador (Player RI + LG)", EditorStyles.boldLabel);
+        GUILayout.Label("Genera o repara al jugador con todas sus armas 3D (Rifle assault1, Bate de béisbol, Linterna 3D [2/F]), cámara con rotación vertical, disparo, pool de balas y HUD completo en la escena activa actual.", EditorStyles.wordWrappedLabel);
+        GUILayout.Space(6);
+        GUI.backgroundColor = new Color(0.25f, 0.65f, 1f);
+        if (GUILayout.Button("Configurar / Reparar Jugador y HUD en Escena Actual", GUILayout.Height(32)))
+        {
+            PlayerSetupUtility.MenuConfigurarSoloJugador();
+        }
+        GUILayout.Space(4);
+        GUI.backgroundColor = new Color(0.2f, 0.85f, 0.5f);
+        if (GUILayout.Button("Corregir Paredes y Puertas en Escena Actual", GUILayout.Height(30)))
+        {
+            PlayerSetupUtility.CorregirParedesYPuertasEscenaActiva();
+        }
+        GUILayout.Space(4);
+        GUI.backgroundColor = new Color(0.95f, 0.6f, 0.2f);
+        if (GUILayout.Button("Configurar Menú de Pausa y Ajustes [Escape]", GUILayout.Height(30)))
+        {
+            PlayerSetupUtility.MenuConfigurarPausa();
+        }
+        GUI.backgroundColor = Color.white;
+        EditorGUILayout.EndVertical();
     }
 
     private static void GenerarPrototipo()
@@ -97,11 +147,16 @@ public class PrototypeSetupWindow : EditorWindow
             GameObject lightGO = new GameObject("Directional Light");
             dirLight = lightGO.AddComponent<Light>();
             dirLight.type = LightType.Directional;
-            lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            dirLight.intensity = 1.2f;
-            dirLight.color = new Color(1f, 0.96f, 0.9f);
             Undo.RegisterCreatedObjectUndo(lightGO, "Crear Luz");
         }
+        dirLight.transform.position = new Vector3(0f, 3f, 0f);
+        dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+        dirLight.intensity = 0.2f;
+        dirLight.color = new Color(1f, 0.95686275f, 0.8392157f, 1f);
+        dirLight.shadows = LightShadows.Soft;
+
+        UniversalAdditionalLightData lightData = dirLight.GetComponent<UniversalAdditionalLightData>();
+        if (lightData == null) lightData = dirLight.gameObject.AddComponent<UniversalAdditionalLightData>();
 
         // 2. Configurar el Suelo de la Arena (30x30 metros)
         GameObject suelo = GameObject.Find("Suelo");
@@ -152,235 +207,46 @@ public class PrototypeSetupWindow : EditorWindow
         if (dialogueMgr == null) dialogueMgr = dialogueMgrGO.AddComponent<LG_DialogueManager>();
         Undo.RegisterCreatedObjectUndo(dialogueMgrGO, "Crear DialogueManager");
 
-        // 4. Crear el Prefab de la Bala si no existe
-        string prefabPath = "Assets/LG_Shooting/LGAssets/BalaPrototipo.prefab";
-        GameObject balaPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-        if (balaPrefab == null)
+        // 3.3 Instanciar Canvas de Pausa y Ajustes de Audio (Canvas.prefab)
+        string canvasPrefabPath = "Assets/AExport/Canvas.prefab";
+        GameObject canvasPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(canvasPrefabPath);
+        GameObject settingsCanvasGO = GameObject.Find("Canvas");
+        if (settingsCanvasGO == null && canvasPrefab != null)
         {
-            GameObject tempBala = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            tempBala.name = "BalaPrototipo";
-            tempBala.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-            
-            LG_Bullet bulletComp = tempBala.AddComponent<LG_Bullet>();
-            
-            Rigidbody rb = tempBala.AddComponent<Rigidbody>();
-            rb.useGravity = false;
-            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            settingsCanvasGO = (GameObject)PrefabUtility.InstantiatePrefab(canvasPrefab);
+            settingsCanvasGO.name = "Canvas";
+        }
 
-            tempBala.GetComponent<Renderer>().sharedMaterial = materialBalas;
-
-            Collider col = tempBala.GetComponent<Collider>();
-            if (col != null) col.isTrigger = true;
-
-            if (!AssetDatabase.IsValidFolder("Assets/LG_Shooting/LGAssets"))
+        if (settingsCanvasGO != null)
+        {
+            Transform pauseScreenT = settingsCanvasGO.transform.Find("PauseScreen");
+            CanvasGroup pauseScreenCG = pauseScreenT != null ? pauseScreenT.GetComponent<CanvasGroup>() : settingsCanvasGO.GetComponentInChildren<CanvasGroup>(true);
+            if (pauseScreenCG != null && timeMgr != null)
             {
-                AssetDatabase.CreateFolder("Assets/LG_Shooting", "LGAssets");
+                SerializedObject tmSO = new SerializedObject(timeMgr);
+                tmSO.FindProperty("pauseScreen").objectReferenceValue = pauseScreenCG;
+                tmSO.FindProperty("pauseKey").intValue = (int)KeyCode.Escape;
+                tmSO.FindProperty("pauseTweenTime").floatValue = 0.25f;
+                tmSO.ApplyModifiedProperties();
             }
 
-            balaPrefab = PrefabUtility.SaveAsPrefabAsset(tempBala, prefabPath);
-            DestroyImmediate(tempBala);
-        }
-        else
-        {
-            Renderer r = balaPrefab.GetComponent<Renderer>();
-            if (r != null && r.sharedMaterial != materialBalas)
+            Button resumeBtn = pauseScreenT != null ? pauseScreenT.GetComponentInChildren<Button>(true) : settingsCanvasGO.GetComponentInChildren<Button>(true);
+            if (resumeBtn != null && timeMgr != null)
             {
-                r.sharedMaterial = materialBalas;
-                EditorUtility.SetDirty(balaPrefab);
+                UnityEditor.Events.UnityEventTools.RemovePersistentListener(resumeBtn.onClick, 0);
+                UnityEditor.Events.UnityEventTools.AddPersistentListener(resumeBtn.onClick, timeMgr.ResumeGame);
             }
+            Undo.RegisterCreatedObjectUndo(settingsCanvasGO, "Instanciar Canvas Settings & Pause");
         }
 
-        // 5. Crear el Object Pool de Balas
-        GameObject poolGO = GameObject.Find("BulletObjectPool");
-        if (poolGO == null)
-        {
-            poolGO = new GameObject("BulletObjectPool");
-        }
-        poolGO.transform.position = Vector3.zero;
-        LG_ObjectPool poolComp = poolGO.GetComponent<LG_ObjectPool>();
-        if (poolComp == null)
-        {
-            poolComp = poolGO.AddComponent<LG_ObjectPool>();
-        }
+        // 4. Crear el Bullet Pool y Prefab
+        LG_ObjectPool poolComp = PlayerSetupUtility.ConfigurarBulletPool();
 
-        SerializedObject poolSO = new SerializedObject(poolComp);
-        poolSO.FindProperty("prefab").objectReferenceValue = balaPrefab;
-        poolSO.FindProperty("initialSize").intValue = 30;
-        poolSO.FindProperty("canGrow").boolValue = true;
-        poolSO.ApplyModifiedProperties();
-        Undo.RegisterCreatedObjectUndo(poolGO, "Crear Bullet Pool");
+        // 5. Configurar el Player Completo con todas sus armas 3D, cámara, componentes y controles
+        var (player, _) = PlayerSetupUtility.ConfigurarJugadorCompleto(new Vector3(0f, 1f, -11f), poolComp);
 
-        // 6. Configurar el Player
-        GameObject player = GameObject.Find("Player (RI + LG)");
-        if (player == null)
-        {
-            player = new GameObject("Player (RI + LG)");
-        }
-        player.transform.position = new Vector3(0f, 1f, -11f); // Inicio al sur de la arena
-        player.transform.rotation = Quaternion.identity;
-
-        CharacterController charCtrl = player.GetComponent<CharacterController>();
-        if (charCtrl == null) charCtrl = player.AddComponent<CharacterController>();
-        charCtrl.height = 1.8f;
-        charCtrl.center = new Vector3(0f, 0.9f, 0f);
-
-        PlayerInput playerInput = player.GetComponent<PlayerInput>();
-        if (playerInput == null) playerInput = player.AddComponent<PlayerInput>();
-        InputActionAsset inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/InputSystem_Actions.inputactions");
-        if (inputActions != null)
-        {
-            playerInput.actions = inputActions;
-            playerInput.defaultControlScheme = "Keyboard&Mouse";
-        }
-
-        // Configurar Cabeza y Camara
-        Transform cabeza = player.transform.Find("Cabeza");
-        if (cabeza == null)
-        {
-            GameObject cabezaGO = new GameObject("Cabeza");
-            cabeza = cabezaGO.transform;
-            cabeza.SetParent(player.transform);
-        }
-        cabeza.localPosition = new Vector3(0f, 1.6f, 0f);
-        cabeza.localRotation = Quaternion.identity;
-
-        Camera mainCamera = Camera.main;
-        if (mainCamera != null)
-        {
-            mainCamera.transform.SetParent(cabeza);
-            mainCamera.transform.localPosition = Vector3.zero;
-            mainCamera.transform.localRotation = Quaternion.identity;
-        }
-
-        // Añadir RIMovement
-        RIMovement movement = player.GetComponent<RIMovement>();
-        if (movement == null) movement = player.AddComponent<RIMovement>();
-        movement.cabeza = cabeza;
-        movement.caminar = 4f;
-        movement.correr = 7f;
-        movement.sensibilidadX = 0.15f;
-        movement.sensibilidadY = 0.15f;
-
-        // Añadir LG_Shoot
-        LG_Shoot shoot = player.GetComponent<LG_Shoot>();
-        if (shoot == null) shoot = player.AddComponent<LG_Shoot>();
-
-        Transform firePoint = cabeza.Find("FirePoint");
-        if (firePoint == null)
-        {
-            GameObject fpGO = new GameObject("FirePoint");
-            firePoint = fpGO.transform;
-            firePoint.SetParent(cabeza);
-        }
-        firePoint.localPosition = new Vector3(0.3f, -0.2f, 0.6f);
-        firePoint.localRotation = Quaternion.identity;
-
-        SerializedObject shootSO = new SerializedObject(shoot);
-        shootSO.FindProperty("bulletPool").objectReferenceValue = poolComp;
-        shootSO.FindProperty("firePoint").objectReferenceValue = firePoint;
-        shootSO.FindProperty("fireRate").floatValue = 0.2f;
-        if (sfxShoot != null) shootSO.FindProperty("shootSound").objectReferenceValue = sfxShoot;
-        if (sfxReload != null) shootSO.FindProperty("reloadSound").objectReferenceValue = sfxReload;
-        if (sfxEmpty != null) shootSO.FindProperty("emptySound").objectReferenceValue = sfxEmpty;
-        shootSO.ApplyModifiedProperties();
-
-        // Añadir LG_Inventory
-        LG_Inventory inventory = player.GetComponent<LG_Inventory>();
-        if (inventory == null) inventory = player.AddComponent<LG_Inventory>();
-
-        // Añadir LG_PlayerHealth
-        LG_PlayerHealth playerHealth = player.GetComponent<LG_PlayerHealth>();
-        if (playerHealth == null) playerHealth = player.AddComponent<LG_PlayerHealth>();
-        SerializedObject healthSO = new SerializedObject(playerHealth);
-        if (sfxPlayerHurt != null) healthSO.FindProperty("hurtSound").objectReferenceValue = sfxPlayerHurt;
-        healthSO.ApplyModifiedProperties();
-
-        // Añadir Hand para armas y ataque melee
-        Hand handComp = player.GetComponent<Hand>();
-        if (handComp == null) handComp = player.AddComponent<Hand>();
-        SerializedObject handSO = new SerializedObject(handComp);
-        if (sfxSwing != null) handSO.FindProperty("swingSound").objectReferenceValue = sfxSwing;
-        if (sfxHit != null) handSO.FindProperty("hitSound").objectReferenceValue = sfxHit;
-        handSO.ApplyModifiedProperties();
-
-        Undo.RegisterCreatedObjectUndo(player, "Configurar Player");
-
-        // 7. Configurar el Canvas HUD
-        GameObject canvasGO = GameObject.Find("HUD_Canvas");
-        if (canvasGO == null)
-        {
-            canvasGO = new GameObject("HUD_Canvas");
-            Canvas canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-
-            canvasGO.AddComponent<GraphicRaycaster>();
-        }
-
-        // Limpiar elementos de HUD anteriores
-        Transform oldHealthSlider = canvasGO.transform.Find("HealthSlider");
-        if (oldHealthSlider != null) DestroyImmediate(oldHealthSlider.gameObject);
-        Transform oldSlider = canvasGO.transform.Find("StaminaSlider");
-        if (oldSlider != null) DestroyImmediate(oldSlider.gameObject);
-        Transform oldText = canvasGO.transform.Find("InventoryText");
-        if (oldText != null) DestroyImmediate(oldText.gameObject);
-        Transform oldCrosshair = canvasGO.transform.Find("Crosshair");
-        if (oldCrosshair != null) DestroyImmediate(oldCrosshair.gameObject);
-
-        // Crear elementos UI
-        Slider healthSlider = CrearSliderVida(canvasGO.transform);
-        Slider staminaSlider = CrearSliderStamina(canvasGO.transform);
-        Text inventoryText = CrearTextoInventario(canvasGO.transform);
-        TMPro.TextMeshProUGUI ammoText = ConfigurarHUDMunicion(canvasGO.transform);
-        CrearCrosshair(canvasGO.transform);
-
-        // Conectar ammoText con LG_Shoot
-        SerializedObject shootUpdateSO = new SerializedObject(shoot);
-        shootUpdateSO.FindProperty("ammoText").objectReferenceValue = ammoText;
-        shootUpdateSO.ApplyModifiedProperties();
-
-        // Configurar LG_HUD
-        LG_HUD hudComp = canvasGO.GetComponent<LG_HUD>();
-        if (hudComp == null) hudComp = canvasGO.AddComponent<LG_HUD>();
-
-        SerializedObject hudSO = new SerializedObject(hudComp);
-        hudSO.FindProperty("playerMovement").objectReferenceValue = movement;
-        hudSO.FindProperty("playerInventory").objectReferenceValue = inventory;
-        hudSO.FindProperty("playerHealth").objectReferenceValue = playerHealth;
-        hudSO.FindProperty("staminaSlider").objectReferenceValue = staminaSlider;
-        hudSO.FindProperty("healthSlider").objectReferenceValue = healthSlider;
-        hudSO.FindProperty("inventoryText").objectReferenceValue = inventoryText;
-        hudSO.ApplyModifiedProperties();
-
-        // Configurar SoundList en HUD_Canvas
-        SoundList soundListComp = canvasGO.GetComponent<SoundList>();
-        if (soundListComp == null) soundListComp = canvasGO.AddComponent<SoundList>();
-        ConfigurarSoundList(soundListComp);
-
-        // Configurar LG_TooltipManager y TooltipText en HUD_Canvas
-        LG_TooltipManager tooltipMgr = canvasGO.GetComponent<LG_TooltipManager>();
-        if (tooltipMgr == null) tooltipMgr = canvasGO.AddComponent<LG_TooltipManager>();
-        TMPro.TextMeshProUGUI tooltipTextTMP = ConfigurarTooltipText(canvasGO.transform);
-        SerializedObject tooltipSO = new SerializedObject(tooltipMgr);
-        tooltipSO.FindProperty("tooltipText").objectReferenceValue = tooltipTextTMP;
-        tooltipSO.ApplyModifiedProperties();
-
-        // Configurar DialoguePanel en HUD_Canvas y conectarlo con DialogueManager
-        ConfigurarDialogueUI(canvasGO.transform, dialogueMgr);
-
-        Undo.RegisterCreatedObjectUndo(canvasGO, "Crear Canvas HUD");
-
-        // Asegurar EventSystem
-        if (UnityEngine.EventSystems.EventSystem.current == null)
-        {
-            GameObject esGO = new GameObject("EventSystem");
-            esGO.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            esGO.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-            Undo.RegisterCreatedObjectUndo(esGO, "Crear EventSystem");
-        }
+        // 6. Configurar Canvas y HUD Completo (Vida, Estamina, Munición, Retícula, Sonidos, Diálogos)
+        GameObject canvasGO = PlayerSetupUtility.ConfigurarHUDCompleto(player, poolComp, dialogueMgr);
 
         // 8. Crear coleccionables en la arena
         GameObject colRoot = GameObject.Find("Coleccionables");
@@ -400,12 +266,20 @@ public class PrototypeSetupWindow : EditorWindow
         CrearColeccionable(colRoot.transform, "Red_Key_Pink", new Vector3(0f, 0.6f, 9f), "Llave Roja", 1, materialKey, sfxPickupKey);
         Undo.RegisterCreatedObjectUndo(colRoot, "Crear Coleccionables Root");
 
-        // 9. Crear objetivos fisicos interactivos (Torre de cubos al centro)
+        // 9. Crear objetivos fisicos interactivos (Torre central y obstáculos periféricos)
         GameObject obstaculosRoot = GameObject.Find("Obstaculos y Objetivos");
         if (obstaculosRoot == null)
         {
             obstaculosRoot = new GameObject("Obstaculos y Objetivos");
         }
+
+        // Contenedor Cubes para la torre central
+        Transform cubesT = obstaculosRoot.transform.Find("Cubes");
+        GameObject cubesGO = cubesT != null ? cubesT.gameObject : new GameObject("Cubes");
+        cubesGO.name = "Cubes";
+        cubesGO.transform.SetParent(obstaculosRoot.transform);
+        cubesGO.transform.localPosition = Vector3.zero;
+        cubesGO.transform.localRotation = Quaternion.identity;
 
         Vector3 spawnCenter = new Vector3(0f, 0.5f, 0f);
         for (int y = 0; y < 4; y++)
@@ -413,13 +287,10 @@ public class PrototypeSetupWindow : EditorWindow
             for (int x = -1; x <= 1; x++)
             {
                 string targetName = $"Target_Cube_{x}_{y}";
-                GameObject target = GameObject.Find(targetName);
-                if (target == null)
-                {
-                    target = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    target.name = targetName;
-                    target.transform.SetParent(obstaculosRoot.transform);
-                }
+                Transform oldTarget = cubesGO.transform.Find(targetName);
+                GameObject target = oldTarget != null ? oldTarget.gameObject : GameObject.CreatePrimitive(PrimitiveType.Cube);
+                target.name = targetName;
+                target.transform.SetParent(cubesGO.transform);
                 target.transform.position = spawnCenter + new Vector3(x * 1.1f, y * 1.1f, 0f);
                 target.transform.rotation = Quaternion.identity;
                 
@@ -427,9 +298,47 @@ public class PrototypeSetupWindow : EditorWindow
                 if (targetRb == null) targetRb = target.AddComponent<Rigidbody>();
                 targetRb.mass = 0.5f;
 
+                NavMeshObstacle nmo = target.GetComponent<NavMeshObstacle>();
+                if (nmo == null) nmo = target.AddComponent<NavMeshObstacle>();
+                nmo.shape = NavMeshObstacleShape.Box;
+                nmo.size = Vector3.one;
+
                 target.GetComponent<Renderer>().sharedMaterial = materialObjetivos;
                 Undo.RegisterCreatedObjectUndo(target, "Crear Objetivo Fisico");
             }
+        }
+
+        // 7 cubos obstáculos sueltos distribuidos por la arena (dimensiones y escalas exactas a LG_Scene)
+        var looseCubes = new (string name, Vector3 pos, Vector3 scale)[]
+        {
+            ("Target_Cube_-1_0 (1)", new Vector3(-4.53f, 2.56f, 8f), new Vector3(1f, 5f, 1f)),
+            ("Target_Cube_-1_0 (2)", new Vector3(4.19f, 2.56f, 8f), new Vector3(1f, 5f, 1f)),
+            ("Target_Cube_-1_0 (3)", new Vector3(4.19f, 2.56f, 12.76f), new Vector3(1f, 5f, 1f)),
+            ("Target_Cube_-1_0 (4)", new Vector3(-4.53f, 2.56f, 13.17f), new Vector3(1f, 5f, 1f)),
+            ("Target_Cube_-1_0 (5)", new Vector3(0.31f, 2.56f, -11.42f), new Vector3(7f, 5f, 1f)),
+            ("Target_Cube_-1_0 (7)", new Vector3(4.19f, 2.56f, -5.73f), new Vector3(1f, 5f, 10f)),
+            ("Target_Cube_-1_0 (8)", new Vector3(-3.51f, 2.56f, -5.73f), new Vector3(1f, 5f, 10f))
+        };
+
+        foreach (var (cName, cPos, cScale) in looseCubes)
+        {
+            Transform oldLC = obstaculosRoot.transform.Find(cName);
+            GameObject lcGO = oldLC != null ? oldLC.gameObject : GameObject.CreatePrimitive(PrimitiveType.Cube);
+            lcGO.name = cName;
+            lcGO.transform.SetParent(obstaculosRoot.transform);
+            lcGO.transform.position = cPos;
+            lcGO.transform.localScale = cScale;
+            lcGO.transform.rotation = Quaternion.identity;
+
+            Rigidbody lcRb = lcGO.GetComponent<Rigidbody>();
+            if (lcRb == null) lcRb = lcGO.AddComponent<Rigidbody>();
+            lcRb.mass = 0.5f;
+
+            NavMeshObstacle oldNmo = lcGO.GetComponent<NavMeshObstacle>();
+            if (oldNmo != null) DestroyImmediate(oldNmo);
+
+            lcGO.GetComponent<Renderer>().sharedMaterial = materialObjetivos;
+            Undo.RegisterCreatedObjectUndo(lcGO, $"Crear Cubo Obstaculo {cName}");
         }
 
         // 10. Crear Enemigos Zombis patrullando
@@ -452,8 +361,8 @@ public class PrototypeSetupWindow : EditorWindow
         CrearEnemigoPrototipo(enemigosRoot.transform, "Enemigo_Derecha", new Vector3(6f, 1f, 4f), materialEnemigo, materialAmmoDrop, "Munición", 5, sfxZombieHit);
         Undo.RegisterCreatedObjectUndo(enemigosRoot, "Crear Enemigos Root");
 
-        // 11. Crear Puerta de Salida en la pared Norte
-        CrearPuertaSalida(new Vector3(0f, 0f, 14.8f), materialPuerta, materialMarco, sfxUnlock, sfxEmpty);
+        // 11. Crear Puerta de Salida en la pared Norte (centrada en z = 15.0f)
+        CrearPuertaSalida(new Vector3(0f, 0f, 15.0f), materialPuerta, materialMarco, sfxUnlock, sfxEmpty);
 
         // 12. Crear Terminal interactiva de diálogo en la Arena
         CrearDialogueTerminal(new Vector3(-13.515f, 1f, 12.233f));
@@ -493,17 +402,17 @@ public class PrototypeSetupWindow : EditorWindow
         // Pared Este (Derecha, x = 15)
         ConfigurarMuro(paredesRoot.transform, "Muro_Este", new Vector3(15f, yPos, 0f), new Vector3(grosor, altura, 30f), matPared);
 
-        // Pared Norte: Dividida en Izquierda, Derecha y Dintel para dejar vano de puerta de 2.6m en el centro
-        float anchoVano = 2.6f;
-        float anchoSegmento = (30f - anchoVano) / 2f; // 13.7m
-        float offsetCentro = (anchoVano / 2f) + (anchoSegmento / 2f); // 8.15m
+        // Pared Norte: Dividida en Izquierda, Derecha y Dintel para dejar vano de puerta de 2.65m en el centro
+        float anchoVano = 2.65f;
+        float anchoSegmento = (30f - anchoVano) / 2f; // 13.675m
+        float offsetCentro = (anchoVano / 2f) + (anchoSegmento / 2f); // 8.1625m
 
         ConfigurarMuro(paredesRoot.transform, "Muro_Norte_Izq", new Vector3(-offsetCentro, yPos, 15f), new Vector3(anchoSegmento, altura, grosor), matPared);
         ConfigurarMuro(paredesRoot.transform, "Muro_Norte_Der", new Vector3(offsetCentro, yPos, 15f), new Vector3(anchoSegmento, altura, grosor), matPared);
 
-        // Dintel superior sobre la puerta
-        float alturaDintel = altura - 3.2f; // 1.3m sobre la puerta
-        float yDintel = 3.2f + (alturaDintel / 2f);
+        // Dintel superior sobre la puerta (Marco_Sup llega a y = 3.325f)
+        float alturaDintel = altura - 3.325f; // 1.175m sobre la puerta
+        float yDintel = 3.325f + (alturaDintel / 2f); // 3.9125m
         ConfigurarMuro(paredesRoot.transform, "Muro_Norte_Dintel", new Vector3(0f, yDintel, 15f), new Vector3(anchoVano, alturaDintel, grosor), matPared);
 
         Undo.RegisterCreatedObjectUndo(paredesRoot, "Crear Paredes Arena");
@@ -578,6 +487,9 @@ public class PrototypeSetupWindow : EditorWindow
         doorPanel.transform.localScale = new Vector3(2.2f, 3.1f, 0.15f);
         if (matPuerta != null) doorPanel.GetComponent<Renderer>().sharedMaterial = matPuerta;
 
+        NavMeshObstacle doorNmo = doorPanel.GetComponent<NavMeshObstacle>();
+        if (doorNmo != null) DestroyImmediate(doorNmo);
+
         // Componente Door
         Door doorComp = puertaRoot.GetComponent<Door>();
         if (doorComp == null) doorComp = puertaRoot.AddComponent<Door>();
@@ -589,12 +501,12 @@ public class PrototypeSetupWindow : EditorWindow
         doorSO.FindProperty("openDuration").floatValue = 1.2f;
         doorSO.ApplyModifiedProperties();
 
-        // Collider Trigger para interacción
+        // Collider Trigger para interacción centrado en el vano
         BoxCollider triggerCol = puertaRoot.GetComponent<BoxCollider>();
         if (triggerCol == null) triggerCol = puertaRoot.AddComponent<BoxCollider>();
         triggerCol.isTrigger = true;
-        triggerCol.center = new Vector3(0f, 1.6f, 0.5f);
-        triggerCol.size = new Vector3(3f, 3.5f, 3f);
+        triggerCol.center = new Vector3(0f, 1.6f, 0f);
+        triggerCol.size = new Vector3(3.2f, 3.5f, 3f);
 
         Undo.RegisterCreatedObjectUndo(puertaRoot, "Crear Puerta Salida");
     }
@@ -921,7 +833,7 @@ public class PrototypeSetupWindow : EditorWindow
         colSO.FindProperty("rotationSpeed").floatValue = 55f;
         colSO.FindProperty("bobFrequency").floatValue = 2f;
         colSO.FindProperty("bobAmplitude").floatValue = 0.15f;
-        if (sfxPickup != null) colSO.FindProperty("pickupSound").objectReferenceValue = sfxPickup;
+        SetPropertyReference(colSO, "pickupSound", sfxPickup);
         colSO.ApplyModifiedProperties();
 
         colGO.GetComponent<Renderer>().sharedMaterial = mat;
@@ -970,7 +882,7 @@ public class PrototypeSetupWindow : EditorWindow
         Rigidbody rb = enemigoGO.GetComponent<Rigidbody>();
         if (rb == null) rb = enemigoGO.AddComponent<Rigidbody>();
         rb.mass = 1.5f;
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.constraints = RigidbodyConstraints.FreezeRotation; // 112 = X | Y | Z congelados para estabilidad
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
 
         LG_Enemy enemyComp = enemigoGO.GetComponent<LG_Enemy>();
@@ -985,7 +897,14 @@ public class PrototypeSetupWindow : EditorWindow
         enemySO.FindProperty("dropItemName").stringValue = dropItem;
         enemySO.FindProperty("dropAmount").intValue = dropQty;
         enemySO.FindProperty("dropMaterial").objectReferenceValue = matDrop;
-        if (sfxHurt != null) enemySO.FindProperty("hurtSound").objectReferenceValue = sfxHurt;
+        enemySO.FindProperty("flashColor").colorValue = new Color(1f, 0.2f, 0.2f, 1f);
+        enemySO.FindProperty("flashDuration").floatValue = 0.15f;
+        enemySO.FindProperty("useProceduralWalk").boolValue = true;
+        enemySO.FindProperty("leftArmWalkOffset").vector3Value = new Vector3(-60f, 0f, 60f);
+        enemySO.FindProperty("rightArmWalkOffset").vector3Value = new Vector3(60f, 0f, -60f);
+        enemySO.FindProperty("attackDamage").floatValue = 10f;
+        enemySO.FindProperty("attackCooldown").floatValue = 1.5f;
+        SetPropertyReference(enemySO, "hurtSound", sfxHurt);
         
         GameObject player = GameObject.Find("Player (RI + LG)");
         if (player != null)
@@ -1147,6 +1066,12 @@ public class PrototypeSetupWindow : EditorWindow
             dSO.FindProperty("lieButton").objectReferenceValue = lieBtn;
             dSO.FindProperty("typingSpeed").floatValue = 0.02f;
             dSO.ApplyModifiedProperties();
+
+            UnityEditor.Events.UnityEventTools.RemovePersistentListener(truthBtn.onClick, 0);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(truthBtn.onClick, dialogueMgr.OnTruthSelected);
+
+            UnityEditor.Events.UnityEventTools.RemovePersistentListener(lieBtn.onClick, 0);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(lieBtn.onClick, dialogueMgr.OnLieSelected);
         }
     }
 
@@ -1226,6 +1151,9 @@ public class PrototypeSetupWindow : EditorWindow
         baseGO.transform.localScale = Vector3.one;
         baseGO.transform.localRotation = Quaternion.identity;
 
+        Material matTerminalBase = AssetDatabase.LoadAssetAtPath<Material>("Assets/LG_Shooting/LGAssets/Materials/Mat_TerminalBase.mat");
+        if (matTerminalBase != null) baseGO.GetComponent<Renderer>().sharedMaterial = matTerminalBase;
+
         // Hijo visual Cube (Cube)
         Transform cubeT = terminalGO.transform.Find("Cube");
         GameObject cubeGO = cubeT != null ? cubeT.gameObject : GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1235,6 +1163,19 @@ public class PrototypeSetupWindow : EditorWindow
         cubeGO.transform.localScale = new Vector3(1f, 1f, 1.7681f);
         cubeGO.transform.localRotation = Quaternion.identity;
 
+        Material matTerminalScreen = AssetDatabase.LoadAssetAtPath<Material>("Assets/LG_Shooting/LGAssets/Materials/Mat_TerminalScreen.mat");
+        if (matTerminalScreen != null) cubeGO.GetComponent<Renderer>().sharedMaterial = matTerminalScreen;
+
         Undo.RegisterCreatedObjectUndo(terminalGO, "Crear DialogueTerminal - Test");
+    }
+
+    private static void SetPropertyReference(SerializedObject so, string propName, Object value)
+    {
+        if (value == null) return;
+        SerializedProperty prop = so.FindProperty(propName);
+        if (prop != null)
+        {
+            prop.objectReferenceValue = value;
+        }
     }
 }

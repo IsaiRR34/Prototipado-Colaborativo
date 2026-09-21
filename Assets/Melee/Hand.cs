@@ -66,7 +66,7 @@ public class Hand : MonoBehaviour
         {
             DefaultGun();
         }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.F))
         {
             TurnOnLight();
         }
@@ -208,6 +208,15 @@ public class Hand : MonoBehaviour
             if (SoundList.Instance != null)
             {
                 SoundList.Instance.PlaySound("SFX_Melee_Hit");
+            }
+
+            // Daño al jefe final
+            BossBabyController boss = hit.collider.GetComponentInParent<BossBabyController>();
+            if (boss != null)
+            {
+                bool isHeadshot = hit.collider.name.ToLower().Contains("head");
+                boss.TakeDamage(attackDamage, isHeadshot);
+                Debug.Log($"[Hand] ¡Golpe de bate al Jefe {boss.name}! Daño: {attackDamage}");
             }
 
             // Daño al enemigo

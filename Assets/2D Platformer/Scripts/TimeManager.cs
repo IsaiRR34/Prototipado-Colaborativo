@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using DG.Tweening;
 using System.Collections;
 
@@ -7,8 +9,9 @@ public class TimeManager : MonoBehaviour
 {
     public static TimeManager Instance { get; private set; }
 
-    [Header("Configuración de Tecla")]
+    [Header("Configuracion de Tecla")]
     [SerializeField] private KeyCode pauseKey = KeyCode.Escape;
+    [SerializeField] private KeyCode alternatePauseKey = KeyCode.P;
 
     [Header("UI Referencias")]
     [SerializeField] private CanvasGroup pauseScreen;
@@ -17,14 +20,35 @@ public class TimeManager : MonoBehaviour
     private bool isPaused = false;
     private Tween pauseTween;
     private Coroutine freezeFrameRoutine;
+    private float lastToggleTime = -1f;
 
-    // Referencia al Player para congelar controles de cámara/movimiento
+    // Referencia al Player para congelar controles de camara/movimiento
     private GameObject playerRef;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void AutoInit()
+    {
+        if (Instance == null && Object.FindFirstObjectByType<TimeManager>() == null)
+        {
+            GameObject tmGO = new GameObject("TimeManager");
+            tmGO.AddComponent<TimeManager>();
+            DontDestroyOnLoad(tmGO);
+            Debug.Log("[TimeManager] Instanciado automaticamente en BeforeSceneLoad.");
+        }
+    }
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else if (Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
     }
 
     private void OnDestroy()
@@ -34,6 +58,67 @@ public class TimeManager : MonoBehaviour
 
     private void Start()
     {
+        // Limpiar cualquier pantalla negra residual (Fader) en la escena
+        EliminarFadersResiduales();
+
+        EnsurePauseScreen();
+        EnsureEventSystem();
+        FindPlayer();
+    }
+
+    private void EliminarFadersResiduales()
+    {
+        Fader[] faders = Object.FindObjectsByType<Fader>(FindObjectsSortMode.None);
+        foreach (var f in faders)
+        {
+            if (f != null && f.gameObject != null)
+            {
+                f.gameObject.SetActive(false);
+                Destroy(f.gameObject);
+            }
+        }
+
+        // Buscar objetos llamados Fader
+        GameObject[] allGOs = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+        foreach (var go in allGOs)
+        {
+            if (go != null && go.name.Equals("Fader", System.StringComparison.OrdinalIgnoreCase))
+            {
+                go.SetActive(false);
+                Destroy(go);
+            }
+        }
+    }
+
+    private void FindPlayer()
+    {
+        if (playerRef == null)
+        {
+            playerRef = GameObject.Find("Player (RI + LG)");
+            if (playerRef == null) playerRef = GameObject.FindGameObjectWithTag("Player");
+        }
+    }
+
+    public CanvasGroup EnsurePauseScreen()
+    {
+        if (pauseScreen != null)
+        {
+            pauseScreen.alpha = 0f;
+            pauseScreen.blocksRaycasts = false;
+            pauseScreen.interactable = false;
+            return pauseScreen;
+        }
+
+        // 1. Buscar en la escena por nombre
+        GameObject canvasGO = GameObject.Find("Canvas");
+        if (canvasGO != null)
+        {
+            LimpiarElementosResidualesCanvas(canvasGO);
+            Transform psT = canvasGO.transform.Find("PauseScreen");
+            if (psT != null) pauseScreen = psT.GetComponent<CanvasGroup>();
+        }
+
+        // 2. Buscar cualquier CanvasGroup de pausa
         if (pauseScreen == null)
         {
             CanvasGroup[] groups = Object.FindObjectsByType<CanvasGroup>(FindObjectsSortMode.None);
@@ -47,27 +132,106 @@ public class TimeManager : MonoBehaviour
             }
         }
 
+        // 3. Si no existe en la escena, cargarlo e instanciarlo
+        if (pauseScreen == null)
+        {
+            GameObject prefab = null;
+#if UNITY_EDITOR
+            prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/AExport/Canvas.prefab");
+#endif
+            if (prefab == null)
+            {
+                prefab = Resources.Load<GameObject>("Canvas");
+            }
+
+            if (prefab != null)
+            {
+                GameObject inst = Instantiate(prefab);
+                inst.name = "Canvas";
+                LimpiarElementosResidualesCanvas(inst);
+
+                Transform psT = inst.transform.Find("PauseScreen");
+                if (psT != null) pauseScreen = psT.GetComponent<CanvasGroup>();
+                else pauseScreen = inst.GetComponentInChildren<CanvasGroup>(true);
+            }
+        }
+
         if (pauseScreen != null)
         {
             pauseScreen.alpha = 0f;
             pauseScreen.blocksRaycasts = false;
             pauseScreen.interactable = false;
+
+            UnityEngine.UI.Button resumeBtn = pauseScreen.GetComponentInChildren<UnityEngine.UI.Button>(true);
+            if (resumeBtn != null)
+            {
+                resumeBtn.onClick.RemoveListener(ResumeGame);
+                resumeBtn.onClick.AddListener(ResumeGame);
+            }
         }
 
-        playerRef = GameObject.Find("Player (RI + LG)");
-        if (playerRef == null)
+        return pauseScreen;
+    }
+
+    private void LimpiarElementosResidualesCanvas(GameObject canvasObj)
+    {
+        if (canvasObj == null) return;
+
+        string[] nombresResiduales = new string[] { "Fader", "CanvasGroup_LifePoints", "CoinText", "IconImage" };
+        foreach (string n in nombresResiduales)
         {
-            playerRef = GameObject.FindGameObjectWithTag("Player");
+            Transform t = canvasObj.transform.Find(n);
+            if (t != null)
+            {
+                t.gameObject.SetActive(false);
+                Destroy(t.gameObject);
+            }
+        }
+    }
+
+    public static void EnsureEventSystem()
+    {
+        if (Object.FindFirstObjectByType<EventSystem>() == null)
+        {
+            GameObject esGO = new GameObject("EventSystem");
+            esGO.AddComponent<EventSystem>();
+            var inputModule = esGO.AddComponent<InputSystemUIInputModule>();
+            inputModule.AssignDefaultActions();
+            Debug.Log("[TimeManager] EventSystem creado automaticamente con InputSystemUIInputModule.");
         }
     }
 
     private void Update()
     {
-        // No abrir pausa si un diálogo está activo en pantalla
-        if (LG_DialogueManager.IsDialogueActive) return;
+        bool pausePressed = false;
 
-        if (Input.GetKeyDown(pauseKey))
+        // 1. Nuevo Input System (Keyboard.current)
+        if (Keyboard.current != null)
         {
+            if (Keyboard.current.escapeKey.wasPressedThisFrame ||
+                Keyboard.current.escapeKey.wasReleasedThisFrame ||
+                Keyboard.current.pKey.wasPressedThisFrame)
+            {
+                pausePressed = true;
+            }
+        }
+
+        // 2. Legacy Input Manager (Escape, P o tecla configurada)
+        if (!pausePressed)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyUp(KeyCode.Escape) ||
+                Input.GetKeyDown(KeyCode.P) ||
+                Input.GetKeyDown(pauseKey) || Input.GetKeyUp(pauseKey) ||
+                Input.GetKeyDown(alternatePauseKey))
+            {
+                pausePressed = true;
+            }
+        }
+
+        // Debounce para evitar doble toggle
+        if (pausePressed && (Time.unscaledTime - lastToggleTime > 0.2f))
+        {
+            lastToggleTime = Time.unscaledTime;
             TogglePause(!isPaused);
         }
     }
@@ -82,6 +246,9 @@ public class TimeManager : MonoBehaviour
         isPaused = pause;
         pauseTween?.Kill();
 
+        EnsurePauseScreen();
+        EnsureEventSystem();
+
         if (isPaused)
         {
             Time.timeScale = 0f;
@@ -89,10 +256,12 @@ public class TimeManager : MonoBehaviour
 
             if (pauseScreen != null)
             {
+                pauseScreen.gameObject.SetActive(true);
                 pauseScreen.blocksRaycasts = true;
                 pauseScreen.interactable = true;
                 pauseTween = pauseScreen.DOFade(1f, pauseTweenTime).SetUpdate(true);
             }
+            Debug.Log("[TimeManager] Juego pausado (Time.timeScale = 0). Presiona [Esc], [P] o haz clic en Reanudar.");
         }
         else
         {
@@ -104,17 +273,23 @@ public class TimeManager : MonoBehaviour
                 pauseScreen.interactable = false;
                 pauseTween = pauseScreen.DOFade(0f, pauseTweenTime)
                     .SetUpdate(true)
-                    .OnComplete(() => Time.timeScale = 1f);
+                    .OnComplete(() =>
+                    {
+                        Time.timeScale = 1f;
+                    });
             }
             else
             {
                 Time.timeScale = 1f;
             }
+            Debug.Log("[TimeManager] Juego reanudado (Time.timeScale = 1).");
         }
     }
 
     public void LockPlayerForTransition(bool lockInput)
     {
+        FindPlayer();
+
         if (playerRef != null)
         {
             PlayerInput pInput = playerRef.GetComponentInChildren<PlayerInput>();
@@ -122,9 +297,12 @@ public class TimeManager : MonoBehaviour
 
             LG_Shoot pShoot = playerRef.GetComponentInChildren<LG_Shoot>();
             if (pShoot != null) pShoot.enabled = !lockInput;
+
+            RIMovement pMovement = playerRef.GetComponentInChildren<RIMovement>();
+            if (pMovement != null) pMovement.enabled = !lockInput;
         }
 
-        // Manejo del cursor para navegar por el menú de pausa
+        // Manejo del cursor para navegar por el menu de pausa
         if (lockInput)
         {
             Cursor.lockState = CursorLockMode.None;

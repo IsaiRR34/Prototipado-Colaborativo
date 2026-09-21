@@ -50,6 +50,8 @@ public class LG_Enemy : MonoBehaviour
     {
         currentHealth = maxHealth;
 
+        DoomLevelManager.Instance?.RegisterEnemySpawned();
+
 //#if UNITY_EDITOR
 //        if (hurtSound == null)
 //        {
@@ -230,6 +232,8 @@ public class LG_Enemy : MonoBehaviour
     private void Die()
     {
         Debug.Log($"[LG_Enemy] {gameObject.name} defeated!", this);
+
+        DoomLevelManager.Instance?.RegisterEnemyKilled();
 
         if (dropItemOnDeath)
         {

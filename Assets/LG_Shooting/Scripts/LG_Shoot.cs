@@ -73,6 +73,11 @@ public class LG_Shoot : MonoBehaviour
             if (playerInventory == null) playerInventory = Object.FindFirstObjectByType<LG_Inventory>();
         }
 
+        if (playerInventory != null)
+        {
+            playerInventory.InitializeFromInspector();
+        }
+
         if (ammoText == null)
         {
             // Priorizar el cuadro de municion en la esquina inferior derecha
@@ -170,11 +175,26 @@ public class LG_Shoot : MonoBehaviour
 
         int reserveAmmo = GetTotalReserveAmmo();
 
-        // Recarga con tecla R
-        if (Input.GetKeyDown(KeyCode.R) && currentClip < maxClipSize && reserveAmmo > 0)
+        // Recarga con tecla R (soporta tanto Input Manager clásico como New Input System)
+        bool reloadPressed = Input.GetKeyDown(KeyCode.R) || 
+                             (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame);
+
+        if (reloadPressed)
         {
-            StartCoroutine(ReloadRoutine());
-            return;
+            if (currentClip < maxClipSize && reserveAmmo > 0)
+            {
+                StartCoroutine(ReloadRoutine());
+                return;
+            }
+            else if (currentClip >= maxClipSize)
+            {
+                LG_TooltipManager.Instance?.ShowTooltipTemporary("Cargador lleno", 1.0f);
+            }
+            else if (reserveAmmo == 0)
+            {
+                if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Empty");
+                LG_TooltipManager.Instance?.ShowTooltipTemporary("<color=#EF4444>Sin munición de reserva</color>", 1.2f);
+            }
         }
 
         bool wantsToShoot = (shootActionInstance != null && shootActionInstance.IsPressed()) || Input.GetMouseButton(0);
@@ -188,10 +208,29 @@ public class LG_Shoot : MonoBehaviour
             }
             else
             {
+                // Si no hay balas en cargador pero sí en reserva, recargar automáticamente
+                if (reserveAmmo > 0 && !isReloading)
+                {
+                    StartCoroutine(ReloadRoutine());
+                    return;
+                }
+
                 // Sonido de gatillo sin balas (Dry Fire)
                 if (SoundList.Instance != null) SoundList.Instance.PlaySound("SFX_Empty");
                 fireRateTimer = fireRate * 1.5f;
             }
+        }
+    }
+
+    /// <summary>
+    /// Intenta recargar el arma si hay munición de reserva y el cargador no está lleno.
+    /// </summary>
+    public void TryReload()
+    {
+        if (!canShoot || isReloading) return;
+        if (currentClip < maxClipSize && GetTotalReserveAmmo() > 0)
+        {
+            StartCoroutine(ReloadRoutine());
         }
     }
 
