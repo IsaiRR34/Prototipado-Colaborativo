@@ -13,26 +13,18 @@ public class LG_TooltipManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        // Fuerza la asignación limpia a esta nueva instancia
+        Instance = this;
     }
 
     private void OnDestroy()
     {
+        // Limpiamos el fantasma de la memoria al recargar la escena
         if (Instance == this) Instance = null;
     }
 
     private void Start()
     {
-        if (tooltipText == null)
-        {
-            tooltipText = GetComponentInChildren<TextMeshProUGUI>(true);
-            if (tooltipText == null)
-            {
-                GameObject tGo = GameObject.Find("TooltipText");
-                if (tGo != null) tooltipText = tGo.GetComponent<TextMeshProUGUI>();
-            }
-        }
         HideTooltip();
     }
 

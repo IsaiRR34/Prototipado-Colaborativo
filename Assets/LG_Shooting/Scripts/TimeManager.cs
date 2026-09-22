@@ -55,7 +55,6 @@ public class TimeManager : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    // 1. Suscribirnos a los cambios de escena de Unity
     private void OnEnable()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
@@ -71,28 +70,21 @@ public class TimeManager : MonoBehaviour
         InitializeForScene();
     }
 
-    // 2. Este método se ejecutará automáticamente cada vez que cambiemos de escena
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         InitializeForScene();
     }
 
-    // 3. Rutina centralizada que garantiza que la escena inicie limpia
     private void InitializeForScene()
     {
-        // Limpiar animaciones o pausas atoradas
         pauseTween?.Kill();
         if (freezeFrameRoutine != null) StopCoroutine(freezeFrameRoutine);
 
         isPaused = false;
         Time.timeScale = 1f;
 
-        EliminarFadersResiduales();
-
-        // Buscar el Canvas de la escena actual
         EnsurePauseScreen();
 
-        // APAGAR EL MENÚ DE INMEDIATO
         if (pauseScreen != null)
         {
             pauseScreen.alpha = 0f;
@@ -102,32 +94,14 @@ public class TimeManager : MonoBehaviour
         }
 
         EnsureEventSystem();
-
-        // Limpiamos y buscamos al jugador de la nueva escena
         playerRef = null;
         FindPlayer();
-    }
 
-    private void EliminarFadersResiduales()
-    {
-        Fader[] faders = Object.FindObjectsByType<Fader>(FindObjectsSortMode.None);
-        foreach (var f in faders)
+        // Aseguramos que el jugador SIEMPRE sea desbloqueado al entrar al nivel
+        string currentScene = SceneManager.GetActiveScene().name;
+        if (currentScene != "MainMenu" && currentScene != "Victory" && currentScene != "GameOver")
         {
-            if (f != null && f.gameObject != null)
-            {
-                f.gameObject.SetActive(false);
-                Destroy(f.gameObject);
-            }
-        }
-
-        GameObject[] allGOs = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
-        foreach (var go in allGOs)
-        {
-            if (go != null && go.name.Equals("Fader", System.StringComparison.OrdinalIgnoreCase))
-            {
-                go.SetActive(false);
-                Destroy(go);
-            }
+            LockPlayerForTransition(false);
         }
     }
 
@@ -142,16 +116,11 @@ public class TimeManager : MonoBehaviour
 
     public CanvasGroup EnsurePauseScreen()
     {
-        // Si el objeto fue destruido al cambiar de escena, Unity lo lee como nulo y lo volvemos a buscar
-        if (pauseScreen != null && pauseScreen.gameObject != null)
-        {
-            return pauseScreen;
-        }
+        if (pauseScreen != null && pauseScreen.gameObject != null) return pauseScreen;
 
         GameObject canvasGO = GameObject.Find("Canvas");
         if (canvasGO != null)
         {
-            LimpiarElementosResidualesCanvas(canvasGO);
             Transform psT = canvasGO.transform.Find("PauseScreen");
             if (psT != null) pauseScreen = psT.GetComponent<CanvasGroup>();
         }
@@ -169,56 +138,24 @@ public class TimeManager : MonoBehaviour
             }
         }
 
-        if (pauseScreen == null)
-        {
-            GameObject prefab = null;
-#if UNITY_EDITOR
-            prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/AExport/Canvas.prefab");
-#endif
-            if (prefab == null)
-            {
-                prefab = Resources.Load<GameObject>("Canvas");
-            }
-
-            if (prefab != null)
-            {
-                GameObject inst = Instantiate(prefab);
-                inst.name = "Canvas";
-                LimpiarElementosResidualesCanvas(inst);
-
-                Transform psT = inst.transform.Find("PauseScreen");
-                if (psT != null) pauseScreen = psT.GetComponent<CanvasGroup>();
-                else pauseScreen = inst.GetComponentInChildren<CanvasGroup>(true);
-            }
-        }
-
         if (pauseScreen != null)
         {
-            UnityEngine.UI.Button resumeBtn = pauseScreen.GetComponentInChildren<UnityEngine.UI.Button>(true);
-            if (resumeBtn != null)
+            // RECUPERAMOS LA LÓGICA QUE HACÍA QUE FUNCIONARA, PERO MÁS INTELIGENTE
+            UnityEngine.UI.Button[] botones = pauseScreen.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+            foreach (var btn in botones)
             {
-                resumeBtn.onClick.RemoveListener(ResumeGame);
-                resumeBtn.onClick.AddListener(ResumeGame);
+                // Busca específicamente un botón que tenga "Resume" o "Reanudar" en su nombre
+                string btnName = btn.gameObject.name.ToLower();
+                if (btnName.Contains("resume") || btnName.Contains("reanudar") || btnName.Contains("continue"))
+                {
+                    btn.onClick.RemoveListener(ResumeGame);
+                    btn.onClick.AddListener(ResumeGame);
+                    break; // Lo encuentra, lo conecta y deja de buscar para no interferir con otros botones
+                }
             }
         }
 
         return pauseScreen;
-    }
-
-    private void LimpiarElementosResidualesCanvas(GameObject canvasObj)
-    {
-        if (canvasObj == null) return;
-
-        string[] nombresResiduales = new string[] { "Fader", "CanvasGroup_LifePoints", "CoinText", "IconImage" };
-        foreach (string n in nombresResiduales)
-        {
-            Transform t = canvasObj.transform.Find(n);
-            if (t != null)
-            {
-                t.gameObject.SetActive(false);
-                Destroy(t.gameObject);
-            }
-        }
     }
 
     public static void EnsureEventSystem()
@@ -227,8 +164,7 @@ public class TimeManager : MonoBehaviour
         {
             GameObject esGO = new GameObject("EventSystem");
             esGO.AddComponent<EventSystem>();
-            var inputModule = esGO.AddComponent<InputSystemUIInputModule>();
-            inputModule.AssignDefaultActions();
+            esGO.AddComponent<InputSystemUIInputModule>().AssignDefaultActions();
         }
     }
 
@@ -273,10 +209,7 @@ public class TimeManager : MonoBehaviour
 
     public void TogglePause(bool pause)
     {
-        if (freezeFrameRoutine != null)
-        {
-            StopCoroutine(freezeFrameRoutine);
-        }
+        if (freezeFrameRoutine != null) StopCoroutine(freezeFrameRoutine);
 
         isPaused = pause;
         pauseTween?.Kill();
@@ -310,7 +243,7 @@ public class TimeManager : MonoBehaviour
                     .OnComplete(() =>
                     {
                         Time.timeScale = 1f;
-                        pauseScreen.gameObject.SetActive(false); // APAGAR EL MENÚ AL REANUDAR
+                        pauseScreen.gameObject.SetActive(false);
                     });
             }
             else
@@ -324,6 +257,17 @@ public class TimeManager : MonoBehaviour
     {
         FindPlayer();
 
+        // 1. PREVENCIÓN DE DESBLOQUEO INVOLUNTARIO
+        if (!lockInput)
+        {
+            bool isUIActive = false;
+            if (LG_DialogueManager.Instance != null && LG_DialogueManager.IsDialogueActive) isUIActive = true;
+            if (LG_TutorialManager.Instance != null && LG_TutorialManager.IsTutorialActive) isUIActive = true;
+
+            // Si hay alguna interfaz activa, cancelamos la orden de devolver los controles
+            if (isUIActive) return;
+        }
+
         if (playerRef != null)
         {
             PlayerInput pInput = playerRef.GetComponentInChildren<PlayerInput>();
@@ -334,6 +278,9 @@ public class TimeManager : MonoBehaviour
 
             RIMovement pMovement = playerRef.GetComponentInChildren<RIMovement>();
             if (pMovement != null) pMovement.enabled = !lockInput;
+
+            Hand pHand = playerRef.GetComponentInChildren<Hand>();
+            if (pHand != null) pHand.enabled = !lockInput;
         }
 
         if (lockInput)

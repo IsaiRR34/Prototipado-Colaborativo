@@ -30,11 +30,11 @@ public class LG_DialogueManager : MonoBehaviour
     private void Awake()
     {
         // Patrón Singleton a prueba de recarga de escenas
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        //if (Instance != null && Instance != this)
+        //{
+        //    Destroy(gameObject);
+        //    return;
+        //}
 
         Instance = this;
         IsDialogueActive = false; // Forzamos el reinicio de la variable al cargar la escena
@@ -86,20 +86,36 @@ public class LG_DialogueManager : MonoBehaviour
 
     private void Update()
     {
-        // Añadida protección contra nulos para evitar el MissingReferenceException
-        if (!IsDialogueActive || optionsContainer == null || dialogueText == null) return;
+        if (!IsDialogueActive) return;
 
-        if (!optionsContainer.activeSelf && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(0)))
+        // Si estamos leyendo el texto normal
+        if (!optionsContainer.activeSelf)
         {
-            if (isTyping)
+            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(0))
             {
-                StopAllCoroutines();
-                dialogueText.text = currentSentence;
-                isTyping = false;
+                if (isTyping)
+                {
+                    StopAllCoroutines();
+                    dialogueText.text = currentSentence;
+                    isTyping = false;
+                }
+                else
+                {
+                    DisplayNextSentence();
+                }
             }
-            else
+        }
+        // Si las opciones están en pantalla, permitimos confirmar la selección con Espacio
+        else
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
             {
-                DisplayNextSentence();
+                if (EventSystem.current != null)
+                {
+                    GameObject selectedBtn = EventSystem.current.currentSelectedGameObject;
+                    if (selectedBtn == truthButton.gameObject) OnTruthSelected();
+                    else if (selectedBtn == lieButton.gameObject) OnLieSelected();
+                }
             }
         }
     }

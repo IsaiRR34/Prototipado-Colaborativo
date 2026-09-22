@@ -24,14 +24,6 @@ public class SoundList : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            Instance = null;
-        }
-    }
-
     private void InitializeSounds()
     {
         soundDictionary.Clear();
@@ -51,10 +43,6 @@ public class SoundList : MonoBehaviour
         {
             sound.source.Play();
         }
-        else
-        {
-            Debug.LogWarning($"[SoundList] Sonido no encontrado: '{audioName}'");
-        }
     }
 
     public void PlaySoundRandomPitch(string audioName, float minPitch = 0.85f, float maxPitch = 1.15f)
@@ -70,7 +58,6 @@ public class SoundList : MonoBehaviour
     {
         if (soundDictionary.TryGetValue(audioName, out Sound sound))
         {
-            // Instanciar un emisor temporal en la posición para sonido 3D posicional en el mundo
             GameObject tempGO = new GameObject($"SFX_{audioName}");
             tempGO.transform.position = position;
 
@@ -93,7 +80,21 @@ public class SoundList : MonoBehaviour
     {
         if (soundDictionary.TryGetValue(audioName, out Sound sound))
         {
+            sound.source.DOKill(); // Mata cualquier animación de volumen pendiente
             sound.source.Stop();
+        }
+    }
+
+    // --- LIMPIEZA ABSOLUTA ---
+    public void StopAllSounds()
+    {
+        foreach (var sound in soundDictionary.Values)
+        {
+            if (sound.source != null)
+            {
+                sound.source.DOKill(); // Protege contra interferencias de DOTween
+                sound.source.Stop();
+            }
         }
     }
 
@@ -101,11 +102,13 @@ public class SoundList : MonoBehaviour
     {
         if (soundDictionary.TryGetValue(audioName, out Sound sound))
         {
+            sound.source.DOKill(); // Previene conflictos si la pista ya estaba haciendo un fade
             sound.source.volume = 0f;
             sound.source.Play();
             sound.source.DOFade(sound.volume, fadeTime).SetUpdate(true).SetDelay(delay);
         }
     }
+
     public float GetClipDuration(string audioName)
     {
         if (soundDictionary.TryGetValue(audioName, out Sound sound))
@@ -137,6 +140,6 @@ public class Sound
         source.outputAudioMixerGroup = mixer;
         source.loop = loop;
         source.playOnAwake = false;
-        source.spatialBlend = 0f; // 2D estéreo base
+        source.spatialBlend = 0f;
     }
 }

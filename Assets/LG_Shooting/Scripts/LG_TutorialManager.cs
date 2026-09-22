@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem; // Necesario para bloquear el Input del jugador
+using UnityEngine.InputSystem;
 
 public class LG_TutorialManager : MonoBehaviour
 {
@@ -13,15 +13,16 @@ public class LG_TutorialManager : MonoBehaviour
     [SerializeField] private GameObject tutorialPanel;
     [SerializeField] private TextMeshProUGUI tutorialText;
     [SerializeField] private Button continueButton;
+    [SerializeField] private Button skipButton; // Botón para saltar todo el tutorial
 
     [Header("Pasos del Tutorial")]
     [TextArea(2, 4)]
     [SerializeField]
     private string[] tutorialSteps = new string[]
     {
-        "¡Bienvenido al juego Sombra Rural!\nUsa las teclas **WASD** para moverte por las instalaciones.",
+        "¡Bienvenido al Testbed de Sombra Rural!\nUsa las teclas **WASD** para moverte por las instalaciones.",
         "Mantén presionado **Left Shift** para correr y **Ctrl** para agacharte y cubrirte.",
-        "Usa las teclas **1, 2 y 3** para alternar entre tu Rifle de Asalto, la Lámpara y el Bat cuerpo a cuerpo.",
+        "Usa las teclas **1, 2 y 3** para alternar entre tu Rifle de Asalto, la Lámpara y el Bate cuerpo a cuerpo.",
         "Con el Rifle equipado (Tecla 1), presiona **R** para recargar tu cargador utilizando la munición de reserva.",
         "Con la Lámpara equipada (Tecla 2), presiona **F** para cambiar o recargar la batería cuando la luz comience a fallar.",
         "Presiona la tecla **H** (o 4) en cualquier momento para aplicar vendas y curar tus heridas.",
@@ -32,8 +33,13 @@ public class LG_TutorialManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+        IsTutorialActive = false;
     }
 
     private void Start()
@@ -44,6 +50,33 @@ public class LG_TutorialManager : MonoBehaviour
             continueButton.onClick.AddListener(NextStep);
         }
 
+        if (skipButton != null)
+        {
+            skipButton.onClick.RemoveAllListeners();
+            skipButton.onClick.AddListener(EndTutorial);
+        }
+
+        StartTutorial();
+    }
+
+    private void Update()
+    {
+        if (!IsTutorialActive) return;
+
+        // Avanzamos manualmente con Espacio o F
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F))
+        {
+            NextStep();
+        }
+    }
+
+    // Método diseñado para ser llamado desde el botón del Menú de Pausa
+    public void StartTutorialFromPause()
+    {
+        // Le avisamos al sistema que el tutorial ya empezó ANTES de quitar la pausa
+        IsTutorialActive = true;
+
+        if (TimeManager.Instance != null) TimeManager.Instance.ResumeGame();
         StartTutorial();
     }
 
@@ -54,9 +87,7 @@ public class LG_TutorialManager : MonoBehaviour
 
         if (tutorialPanel != null) tutorialPanel.SetActive(true);
 
-        // Liberamos el cursor y bloqueamos al jugador
         LockPlayer(true);
-
         ShowStep();
     }
 
@@ -71,11 +102,12 @@ public class LG_TutorialManager : MonoBehaviour
                 tutorialText.text = tutorialSteps[currentStep];
             }
 
-            // Seleccionar el botón para permitir navegación por teclado/gamepad
-            if (EventSystem.current != null && continueButton != null)
+            // CORRECCIÓN DEL SALTO DOBLE:
+            // Quitamos la selección automática del EventSystem. 
+            // Así la barra espaciadora no activará el botón nativamente, solo a través de nuestro código en el Update.
+            if (EventSystem.current != null)
             {
                 EventSystem.current.SetSelectedGameObject(null);
-                EventSystem.current.SetSelectedGameObject(continueButton.gameObject);
             }
         }
         else
@@ -94,15 +126,9 @@ public class LG_TutorialManager : MonoBehaviour
     {
         IsTutorialActive = false;
 
-        if (tutorialPanel != null)
-        {
-            tutorialPanel.SetActive(false);
-        }
+        if (tutorialPanel != null) tutorialPanel.SetActive(false);
 
-        // Ocultamos el cursor y devolvemos el control al jugador
         LockPlayer(false);
-
-        LG_TooltipManager.Instance?.ShowTooltipTemporary("<color=#10B981><b>¡Tutorial completado! Buena suerte.</b></color>", 3f);
     }
 
     private void LockPlayer(bool lockInput)
@@ -132,8 +158,15 @@ public class LG_TutorialManager : MonoBehaviour
         }
         else
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            bool isUIActive = false;
+            if (LG_DialogueManager.Instance != null && LG_DialogueManager.IsDialogueActive) isUIActive = true;
+            if (LG_TutorialManager.Instance != null && LG_TutorialManager.IsTutorialActive) isUIActive = true;
+
+            if (!isUIActive)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
         }
     }
 }
