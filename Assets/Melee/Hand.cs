@@ -6,7 +6,7 @@ public class Hand : MonoBehaviour
 {
     [Header("Referencias de Armas")]
     [SerializeField] private LG_Shoot shootScript;
-    public GameObject sword; // Bate de beisbol
+    public GameObject sword; // Bat de beisbol
     public GameObject flashLight;
     public GameObject gun;
 
@@ -16,10 +16,8 @@ public class Hand : MonoBehaviour
     [SerializeField] private float attackRate = 0.45f;
     [SerializeField] private float hitForce = 12f;
 
-    //[Header("Efectos de Audio (SFX)")]
-    //[SerializeField] private AudioSource audioSource;
-    //[SerializeField] private AudioClip swingSound;
-    //[SerializeField] private AudioClip hitSound;
+    [Header("HUD")]
+    [SerializeField] private GameObject crosshairImage;
 
     private bool canHit;
     private float nextAttackTime = 0f;
@@ -30,18 +28,6 @@ public class Hand : MonoBehaviour
 
     void Start()
     {
-//        if (audioSource == null)
-//        {
-//            audioSource = GetComponent<AudioSource>();
-//            if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-//            audioSource.playOnAwake = false;
-//        }
-
-//#if UNITY_EDITOR
-//        if (swingSound == null) swingSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Melee_Swing.wav");
-//        if (hitSound == null) hitSound = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/LG_Shooting/LGAssets/Audio/SFX_Melee_Hit.wav");
-//#endif
-
         if (shootScript == null)
         {
             shootScript = GetComponentInChildren<LG_Shoot>();
@@ -79,7 +65,7 @@ public class Hand : MonoBehaviour
         // Ataque Melee con el Bate
         if (canHit && !isSwinging && Time.time >= nextAttackTime)
         {
-            if (Input.GetMouseButtonDown(0))
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 nextAttackTime = Time.time + attackRate;
                 StartCoroutine(PerformMeleeSwing());
@@ -97,6 +83,7 @@ public class Hand : MonoBehaviour
         if (gun != null) gun.SetActive(true);
 
         if (shootScript != null) shootScript.EnableShooting(true);
+        if (crosshairImage != null) crosshairImage.SetActive(true);
     }
 
     void TurnOnLight()
@@ -109,6 +96,7 @@ public class Hand : MonoBehaviour
         if (sword != null) sword.SetActive(false);
 
         if (shootScript != null) shootScript.EnableShooting(false);
+        if (crosshairImage != null) crosshairImage.SetActive(false);
     }
 
     void GetSword()
@@ -120,6 +108,7 @@ public class Hand : MonoBehaviour
         if (flashLight != null) flashLight.SetActive(false);
 
         if (shootScript != null) shootScript.EnableShooting(false);
+        if (crosshairImage != null) crosshairImage.SetActive(false);
     }
 
     private void CancelSwing()
@@ -139,11 +128,6 @@ public class Hand : MonoBehaviour
     private IEnumerator PerformMeleeSwing()
     {
         isSwinging = true;
-
-        //if (audioSource != null && swingSound != null)
-        //{
-        //    audioSource.PlayOneShot(swingSound, 0.85f);
-        //}
 
         if (SoundList.Instance != null)
         {
@@ -201,10 +185,6 @@ public class Hand : MonoBehaviour
         // SphereCast para tener un area de impacto generosa y satisfactoria
         if (Physics.SphereCast(origin, 0.4f, direction, out hit, attackRange))
         {
-            //if (audioSource != null && hitSound != null)
-            //{
-            //    audioSource.PlayOneShot(hitSound, 0.95f);
-            //}
 
             if (SoundList.Instance != null)
             {
