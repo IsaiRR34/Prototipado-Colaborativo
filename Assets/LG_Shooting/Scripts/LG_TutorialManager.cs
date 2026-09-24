@@ -63,10 +63,13 @@ public class LG_TutorialManager : MonoBehaviour
     {
         if (!IsTutorialActive) return;
 
-        // Avanzamos manualmente con Espacio o F
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F))
+        // NUEVO MÉTODO: Avanzamos manualmente con Espacio o F
+        if (Keyboard.current != null)
         {
-            NextStep();
+            if (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.fKey.wasPressedThisFrame)
+            {
+                NextStep();
+            }
         }
     }
 

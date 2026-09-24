@@ -1,5 +1,6 @@
-using UnityEngine;
 using DG.Tweening;
+using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class DoomDoorController : MonoBehaviour
 {
@@ -48,7 +49,7 @@ public class DoomDoorController : MonoBehaviour
 
     private void Update()
     {
-        if (playerInRange && Input.GetKeyDown(KeyCode.E))
+        if (playerInRange && (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame))
         {
             TryInteractDoor();
         }

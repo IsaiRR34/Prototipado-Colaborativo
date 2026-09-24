@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class LG_Flashlight : MonoBehaviour
@@ -64,7 +65,7 @@ public class LG_Flashlight : MonoBehaviour
         }
 
         // 3. Recarga con F
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
         {
             TryRecharge();
         }

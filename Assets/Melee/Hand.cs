@@ -1,5 +1,6 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Hand : MonoBehaviour
 {
@@ -62,15 +63,15 @@ public class Hand : MonoBehaviour
     void Update()
     {
         // Cambio de armas
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (Keyboard.current != null && Keyboard.current.digit1Key.wasPressedThisFrame)
         {
             DefaultGun();
         }
-        if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.F))
+        if (Keyboard.current != null && Keyboard.current.digit2Key.wasPressedThisFrame)
         {
             TurnOnLight();
         }
-        if (Input.GetKeyDown(KeyCode.Alpha3))
+        if (Keyboard.current != null && Keyboard.current.digit3Key.wasPressedThisFrame)
         {
             GetSword();
         }

@@ -86,12 +86,15 @@ public class LG_DialogueManager : MonoBehaviour
 
     private void Update()
     {
-        if (!IsDialogueActive) return;
+        if (!IsDialogueActive || optionsContainer == null || dialogueText == null) return;
 
-        // Si estamos leyendo el texto normal
         if (!optionsContainer.activeSelf)
         {
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.F) || Input.GetMouseButtonDown(0))
+            bool advancePressed = false;
+            if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.fKey.wasPressedThisFrame)) advancePressed = true;
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) advancePressed = true;
+
+            if (advancePressed)
             {
                 if (isTyping)
                 {
@@ -105,10 +108,9 @@ public class LG_DialogueManager : MonoBehaviour
                 }
             }
         }
-        // Si las opciones están en pantalla, permitimos confirmar la selección con Espacio
         else
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.fKey.wasPressedThisFrame))
             {
                 if (EventSystem.current != null)
                 {

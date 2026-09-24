@@ -10,10 +10,6 @@ public class TimeManager : MonoBehaviour
 {
     public static TimeManager Instance { get; private set; }
 
-    [Header("Configuracion de Tecla")]
-    [SerializeField] private KeyCode pauseKey = KeyCode.Escape;
-    [SerializeField] private KeyCode alternatePauseKey = KeyCode.P;
-
     [Header("UI Referencias")]
     [SerializeField] private CanvasGroup pauseScreen;
     [SerializeField] private float pauseTweenTime = 0.25f;
@@ -97,7 +93,6 @@ public class TimeManager : MonoBehaviour
         playerRef = null;
         FindPlayer();
 
-        // Aseguramos que el jugador SIEMPRE sea desbloqueado al entrar al nivel
         string currentScene = SceneManager.GetActiveScene().name;
         if (currentScene != "MainMenu" && currentScene != "Victory" && currentScene != "GameOver")
         {
@@ -140,17 +135,15 @@ public class TimeManager : MonoBehaviour
 
         if (pauseScreen != null)
         {
-            // RECUPERAMOS LA LÓGICA QUE HACÍA QUE FUNCIONARA, PERO MÁS INTELIGENTE
             UnityEngine.UI.Button[] botones = pauseScreen.GetComponentsInChildren<UnityEngine.UI.Button>(true);
             foreach (var btn in botones)
             {
-                // Busca específicamente un botón que tenga "Resume" o "Reanudar" en su nombre
                 string btnName = btn.gameObject.name.ToLower();
                 if (btnName.Contains("resume") || btnName.Contains("reanudar") || btnName.Contains("continue"))
                 {
                     btn.onClick.RemoveListener(ResumeGame);
                     btn.onClick.AddListener(ResumeGame);
-                    break; // Lo encuentra, lo conecta y deja de buscar para no interferir con otros botones
+                    break;
                 }
             }
         }
@@ -179,22 +172,10 @@ public class TimeManager : MonoBehaviour
 
         bool pausePressed = false;
 
+        // NUEVO MÉTODO: Lectura directa del teclado
         if (Keyboard.current != null)
         {
-            if (Keyboard.current.escapeKey.wasPressedThisFrame ||
-                Keyboard.current.escapeKey.wasReleasedThisFrame ||
-                Keyboard.current.pKey.wasPressedThisFrame)
-            {
-                pausePressed = true;
-            }
-        }
-
-        if (!pausePressed)
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyUp(KeyCode.Escape) ||
-                Input.GetKeyDown(KeyCode.P) ||
-                Input.GetKeyDown(pauseKey) || Input.GetKeyUp(pauseKey) ||
-                Input.GetKeyDown(alternatePauseKey))
+            if (Keyboard.current.escapeKey.wasPressedThisFrame || Keyboard.current.pKey.wasPressedThisFrame)
             {
                 pausePressed = true;
             }
@@ -257,14 +238,11 @@ public class TimeManager : MonoBehaviour
     {
         FindPlayer();
 
-        // 1. PREVENCIÓN DE DESBLOQUEO INVOLUNTARIO
         if (!lockInput)
         {
             bool isUIActive = false;
             if (LG_DialogueManager.Instance != null && LG_DialogueManager.IsDialogueActive) isUIActive = true;
             if (LG_TutorialManager.Instance != null && LG_TutorialManager.IsTutorialActive) isUIActive = true;
-
-            // Si hay alguna interfaz activa, cancelamos la orden de devolver los controles
             if (isUIActive) return;
         }
 

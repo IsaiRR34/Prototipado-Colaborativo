@@ -176,8 +176,7 @@ public class LG_Shoot : MonoBehaviour
         int reserveAmmo = GetTotalReserveAmmo();
 
         // Recarga con tecla R (soporta tanto Input Manager clásico como New Input System)
-        bool reloadPressed = Input.GetKeyDown(KeyCode.R) || 
-                             (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame);
+        bool reloadPressed = (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame);
 
         if (reloadPressed)
         {
@@ -197,7 +196,7 @@ public class LG_Shoot : MonoBehaviour
             }
         }
 
-        bool wantsToShoot = (shootActionInstance != null && shootActionInstance.IsPressed()) || Input.GetMouseButton(0);
+        bool wantsToShoot = (shootActionInstance != null && shootActionInstance.IsPressed());
 
         if (wantsToShoot && fireRateTimer <= 0f)
         {

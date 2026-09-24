@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class LG_Inventory : MonoBehaviour
 {
@@ -172,7 +173,7 @@ public class LG_Inventory : MonoBehaviour
     private void Update()
     {
         // Tecla H o 4 para consumir curación estratégica (Vendas) según GDD
-        if (Input.GetKeyDown(KeyCode.H) || Input.GetKeyDown(KeyCode.Alpha4))
+        if (Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
         {
             UseHealingItem();
         }

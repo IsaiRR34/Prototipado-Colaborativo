@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class LG_DialogueTrigger : MonoBehaviour
 {
@@ -28,7 +29,7 @@ public class LG_DialogueTrigger : MonoBehaviour
             }
         }
 
-        if (playerInRange && !LG_DialogueManager.IsDialogueActive && Input.GetKeyDown(KeyCode.E))
+        if (playerInRange && !LG_DialogueManager.IsDialogueActive && (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame))
         {
             LG_TooltipManager.Instance?.HideTooltip();
 

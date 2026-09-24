@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PickupInteractable : MonoBehaviour
 {
@@ -39,7 +40,7 @@ public class PickupInteractable : MonoBehaviour
 
         if (playerInRange && requireInteractionKey)
         {
-            if (Input.GetKeyDown(KeyCode.E))
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
                 TryCollect(currentInventory);
             }
